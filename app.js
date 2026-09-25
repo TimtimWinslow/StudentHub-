@@ -1316,10 +1316,7 @@ async function updatePresence(status = "online") {
    ========================================================= */
 
 async function loadAcademicSummary() {
-  if (
-    !supabaseClient ||
-    !state.user
-  ) {
+  if (!supabaseClient || !state.user) {
     return;
   }
 
@@ -1336,15 +1333,28 @@ async function loadAcademicSummary() {
       error.message
     );
 
+    setText("status-progress", "—");
+    setText("status-average", "—");
+    setText("status-gpa", "—");
+    setText("status-grade", "—");
+    setText("status-consistency", "—");
+    setText("status-tests", "0");
+
     return;
   }
 
   if (!data) {
+    setText("status-progress", "No data");
+    setText("status-average", "—");
+    setText("status-gpa", "—");
+    setText("status-grade", "—");
+    setText("status-consistency", "—");
+    setText("status-tests", "0");
+
     return;
   }
 
-  const average =
-    data.overall_average;
+  const average = data.overall_average;
 
   const progress =
     data.total_tests
@@ -1381,9 +1391,7 @@ async function loadAcademicSummary() {
   setText(
     "status-consistency",
     data.score_consistency !== null
-      ? Number(
-          data.score_consistency
-        ).toFixed(1)
+      ? Number(data.score_consistency).toFixed(1)
       : "—"
   );
 
