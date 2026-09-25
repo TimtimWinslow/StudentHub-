@@ -1972,7 +1972,8 @@ async function initializeApp() {
 document.addEventListener(
   "DOMContentLoaded",
   initializeApp
-);
+)
+
 
 /* =========================================================
    SMOOTH REACTION ANIMATIONS
