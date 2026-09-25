@@ -12,7 +12,7 @@
 */
 
 const SUPABASE_URL = "https://csmizeuuywlonuysktka.supabase.com";
-const SUPABASE_ANON_KEY = "https://student-hub-five-psi.vercel.app/";
+const SUPABASE_ANON_KEY = "sb_publishable_KVMi8il5yurqMPr6DD8PCA_cDEXdcF0";
 
 /* =========================================================
    SUPABASE
