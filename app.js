@@ -1078,7 +1078,7 @@ async function loadFeed() {
     </div>
   `;
 
-  const { data, error } =
+  const { data: posts, error: postsError } =
     await supabaseClient
       .from("feed_posts")
       .select("*")
@@ -1090,10 +1090,10 @@ async function loadFeed() {
       })
       .limit(20);
 
-  if (error) {
+  if (postsError) {
     console.error(
       "Feed loading error:",
-      error
+      postsError
     );
 
     feedList.innerHTML = `
@@ -1105,19 +1105,67 @@ async function loadFeed() {
     return;
   }
 
-  if (!data || data.length === 0) {
+  if (!posts || posts.length === 0) {
     feedList.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">📰</div>
         <strong>No posts yet</strong>
-        <span>Be the first to share something with the class.</span>
+        <span>
+          Be the first to share something with the class.
+        </span>
       </div>
     `;
 
     return;
   }
 
-  feedList.innerHTML = data
+  const postIds =
+    posts.map((post) => post.id);
+
+  /*
+    Load reactions for these posts.
+  */
+
+  const { data: reactions, error: reactionsError } =
+    await supabaseClient
+      .from("feed_reactions")
+      .select("post_id, user_id, reaction")
+      .in("post_id", postIds);
+
+  if (reactionsError) {
+    console.error(
+      "Reaction loading error:",
+      reactionsError
+    );
+  }
+
+  /*
+    Organize reaction information by post.
+  */
+
+  const reactionMap = {};
+
+  (reactions || []).forEach((reaction) => {
+
+    if (!reactionMap[reaction.post_id]) {
+      reactionMap[reaction.post_id] = {
+        count: 0,
+        reactedByUser: false
+      };
+    }
+
+    reactionMap[reaction.post_id].count += 1;
+
+    if (
+      reaction.user_id === state.user?.id
+    ) {
+      reactionMap[reaction.post_id]
+        .reactedByUser = true;
+    }
+
+  });
+
+  feedList.innerHTML = posts
     .map((post) => {
 
       const isOwnPost =
@@ -1130,6 +1178,26 @@ async function loadFeed() {
 
       const initials =
         getInitials(name);
+
+      const reactionInfo =
+        reactionMap[post.id] || {
+          count: 0,
+          reactedByUser: false
+        };
+
+      const reactionButtonText =
+        reactionInfo.reactedByUser
+          ? "❤️ Reacted"
+          : "❤️ React";
+
+      const reactionCount =
+        reactionInfo.count > 0
+          ? `
+            <span class="reaction-count">
+              ${reactionInfo.count}
+            </span>
+          `
+          : "";
 
       const pinnedBadge =
         post.pinned
@@ -1207,11 +1275,16 @@ async function loadFeed() {
           <div class="post-actions">
 
             <button
-              class="post-action"
+              class="post-action ${
+                reactionInfo.reactedByUser
+                  ? "active"
+                  : ""
+              }"
               type="button"
               data-react-post="${escapeHtml(post.id)}"
             >
-              ❤️ React
+              ${reactionButtonText}
+              ${reactionCount}
             </button>
 
             <button
@@ -1230,6 +1303,118 @@ async function loadFeed() {
       `;
     })
     .join("");
+
+  /*
+    Connect reaction buttons.
+  */
+
+  document
+    .querySelectorAll("[data-react-post]")
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const postId =
+            button.dataset.reactPost;
+
+          togglePostReaction(postId);
+
+        }
+      );
+
+    });
+}
+
+/* =========================================================
+   POST REACTIONS
+   ========================================================= */
+
+async function togglePostReaction(postId) {
+
+  if (
+    !supabaseClient ||
+    !state.user ||
+    !postId
+  ) {
+    return;
+  }
+
+  const { data: existingReaction, error: findError } =
+    await supabaseClient
+      .from("feed_reactions")
+      .select("id")
+      .eq("post_id", postId)
+      .eq("user_id", state.user.id)
+      .eq("reaction", "heart")
+      .maybeSingle();
+
+  if (findError) {
+    console.error(
+      "Reaction lookup error:",
+      findError
+    );
+
+    return;
+  }
+
+  /*
+    If the student already reacted,
+    remove their reaction.
+  */
+
+  if (existingReaction) {
+
+    const { error } =
+      await supabaseClient
+        .from("feed_reactions")
+        .delete()
+        .eq("id", existingReaction.id);
+
+    if (error) {
+      console.error(
+        "Reaction removal error:",
+        error
+      );
+
+      return;
+    }
+
+  }
+
+  /*
+    Otherwise add their reaction.
+  */
+
+  else {
+
+    const { error } =
+      await supabaseClient
+        .from("feed_reactions")
+        .insert({
+          post_id: postId,
+          user_id: state.user.id,
+          reaction: "heart"
+        });
+
+    if (error) {
+      console.error(
+        "Reaction creation error:",
+        error
+      );
+
+      return;
+    }
+
+  }
+
+  /*
+    Refresh the feed so the count
+    and button state update.
+  */
+
+  await loadFeed();
 }
 
 /* =========================================================
