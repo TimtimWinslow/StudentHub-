@@ -225,31 +225,43 @@ async function handleLogin(event) {
   const message =
     document.getElementById("auth-message");
 
-  if (!supabaseClient) {
+  try {
+    if (!supabaseClient) {
+      message.textContent =
+        "Supabase is not configured yet.";
+      return;
+    }
+
+    message.textContent = "Signing in...";
+
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+    if (error) {
+      message.textContent =
+        "Login error: " + error.message;
+      return;
+    }
+
+    state.session = data.session;
+    state.user = data.user;
+
+    message.textContent = "Login successful. Loading your StudentHub...";
+
+    await loadProfile();
+
+    renderApp();
+
+  } catch (error) {
+    console.error("StudentHub login/load error:", error);
+
     message.textContent =
-      "Supabase is not configured yet.";
-    return;
+      "StudentHub error: " +
+      (error?.message || String(error));
   }
-
-  message.textContent = "Signing in...";
-
-  const { data, error } =
-    await supabaseClient.auth.signInWithPassword({
-      email,
-      password
-    });
-
-  if (error) {
-    message.textContent = error.message;
-    return;
-  }
-
-  state.session = data.session;
-  state.user = data.user;
-
-  await loadProfile();
-
-  renderApp();
 }
 
 /* =========================================================
