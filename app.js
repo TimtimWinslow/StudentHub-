@@ -772,10 +772,15 @@ function renderStatusPanel() {
 
 function renderFeedPanel() {
   return `
-    <section class="panel">
+    <section class="panel feed-panel">
 
       <div class="panel-header">
-        <h2>📰 Main Feed</h2>
+        <div>
+          <h2>📰 Main Feed</h2>
+          <p class="panel-subtitle">
+            Stay connected with your class.
+          </p>
+        </div>
       </div>
 
       <div class="panel-body">
@@ -785,13 +790,19 @@ function renderFeedPanel() {
           <textarea
             id="post-content"
             placeholder="What's happening?"
+            maxlength="2000"
           ></textarea>
 
           <div class="feed-composer-footer">
 
+            <span class="composer-hint">
+              Share an update with The Care Team.
+            </span>
+
             <button
               id="create-post-button"
               class="small-button"
+              type="button"
             >
               Post
             </button>
@@ -799,6 +810,12 @@ function renderFeedPanel() {
           </div>
 
         </div>
+
+        <div
+          id="feed-message"
+          class="feed-message"
+          aria-live="polite"
+        ></div>
 
         <div id="feed-list">
 
@@ -823,7 +840,12 @@ function renderActivePanel() {
     <section class="panel active-panel">
 
       <div class="panel-header">
-        <h2>🟢 Who's Active</h2>
+        <div>
+          <h2>🟢 Who's Active</h2>
+          <p class="panel-subtitle">
+            See who's currently around StudentHub.
+          </p>
+        </div>
       </div>
 
       <div class="panel-body">
@@ -834,10 +856,18 @@ function renderActivePanel() {
         >
 
           <div class="empty-state">
-            Loading...
+            Loading active users...
           </div>
 
         </div>
+
+        <button
+          id="view-all-active-button"
+          class="secondary-button"
+          type="button"
+        >
+          View All
+        </button>
 
       </div>
 
@@ -1042,30 +1072,45 @@ async function loadFeed() {
     return;
   }
 
+  feedList.innerHTML = `
+    <div class="empty-state">
+      Loading feed...
+    </div>
+  `;
+
   const { data, error } =
     await supabaseClient
       .from("feed_posts")
       .select("*")
+      .order("pinned", {
+        ascending: false
+      })
       .order("created_at", {
         ascending: false
       })
       .limit(20);
 
   if (error) {
+    console.error(
+      "Feed loading error:",
+      error
+    );
+
     feedList.innerHTML = `
       <div class="empty-state">
-        Unable to load feed.
+        Unable to load feed right now.
       </div>
     `;
 
-    console.error(error);
     return;
   }
 
   if (!data || data.length === 0) {
     feedList.innerHTML = `
       <div class="empty-state">
-        No posts yet. Be the first to post!
+        <div class="empty-state-icon">📰</div>
+        <strong>No posts yet</strong>
+        <span>Be the first to share something with the class.</span>
       </div>
     `;
 
@@ -1075,13 +1120,56 @@ async function loadFeed() {
   feedList.innerHTML = data
     .map((post) => {
 
+      const isOwnPost =
+        post.user_id === state.user?.id;
+
       const name =
-        post.user_id === state.user?.id
+        isOwnPost
           ? getDisplayName()
           : "Student";
 
       const initials =
         getInitials(name);
+
+      const pinnedBadge =
+        post.pinned
+          ? `
+            <span class="post-badge">
+              📌 Pinned
+            </span>
+          `
+          : "";
+
+      const editedBadge =
+        post.updated_at &&
+        post.updated_at !== post.created_at
+          ? `
+            <span class="post-edited">
+              · edited
+            </span>
+          `
+          : "";
+
+      const ownActions =
+        isOwnPost
+          ? `
+            <button
+              class="post-action"
+              type="button"
+              data-edit-post="${escapeHtml(post.id)}"
+            >
+              ✏️ Edit
+            </button>
+
+            <button
+              class="post-action danger"
+              type="button"
+              data-delete-post="${escapeHtml(post.id)}"
+            >
+              🗑️ Delete
+            </button>
+          `
+          : "";
 
       return `
         <article
@@ -1095,15 +1183,20 @@ async function loadFeed() {
               ${escapeHtml(initials)}
             </div>
 
-            <div>
+            <div class="post-author-area">
+
               <div class="post-user">
                 ${escapeHtml(name)}
               </div>
 
               <div class="post-time">
                 ${formatDate(post.created_at)}
+                ${editedBadge}
               </div>
+
             </div>
+
+            ${pinnedBadge}
 
           </div>
 
@@ -1116,6 +1209,7 @@ async function loadFeed() {
             <button
               class="post-action"
               type="button"
+              data-react-post="${escapeHtml(post.id)}"
             >
               ❤️ React
             </button>
@@ -1123,9 +1217,12 @@ async function loadFeed() {
             <button
               class="post-action"
               type="button"
+              data-comment-post="${escapeHtml(post.id)}"
             >
               💬 Comment
             </button>
+
+            ${ownActions}
 
           </div>
 
@@ -1207,13 +1304,24 @@ async function loadActiveUsers() {
     return;
   }
 
-  const { data, error } =
+  list.innerHTML = `
+    <div class="empty-state">
+      Loading active users...
+    </div>
+  `;
+
+  const { data: presenceData, error: presenceError } =
     await supabaseClient
       .from("user_presence")
-      .select("*")
+      .select("user_id, status, last_seen_at")
       .order("status");
 
-  if (error) {
+  if (presenceError) {
+    console.error(
+      "Presence loading error:",
+      presenceError
+    );
+
     list.innerHTML = `
       <div class="empty-state">
         Unable to load active users.
@@ -1223,23 +1331,59 @@ async function loadActiveUsers() {
     return;
   }
 
-  if (!data || data.length === 0) {
+  if (
+    !presenceData ||
+    presenceData.length === 0
+  ) {
     list.innerHTML = `
       <div class="empty-state">
-        No presence information yet.
+        <div class="empty-state-icon">🟢</div>
+        <strong>No one is showing as active yet.</strong>
+        <span>Your status will appear here when presence is enabled.</span>
       </div>
     `;
 
     return;
   }
 
-  list.innerHTML = data
+  const userIds =
+    presenceData.map(
+      (user) => user.user_id
+    );
+
+  const { data: profilesData, error: profilesError } =
+    await supabaseClient
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", userIds);
+
+  if (profilesError) {
+    console.error(
+      "Profile loading error:",
+      profilesError
+    );
+  }
+
+  const profileMap = {};
+
+  (profilesData || []).forEach(
+    (profile) => {
+      profileMap[profile.id] =
+        profile.display_name ||
+        "Student";
+    }
+  );
+
+  list.innerHTML = presenceData
     .map((user) => {
 
       const name =
         user.user_id === state.user?.id
           ? getDisplayName()
-          : "Student";
+          : (
+              profileMap[user.user_id] ||
+              "Student"
+            );
 
       const status =
         user.status || "offline";
@@ -1249,7 +1393,12 @@ async function loadActiveUsers() {
         status.slice(1);
 
       return `
-        <div class="active-user">
+        <div
+          class="active-user"
+          data-user-id="${escapeHtml(
+            user.user_id
+          )}"
+        >
 
           <div class="avatar">
             ${escapeHtml(
@@ -1260,6 +1409,9 @@ async function loadActiveUsers() {
           <span
             class="status-dot ${escapeHtml(
               status
+            )}"
+            aria-label="${escapeHtml(
+              statusText
             )}"
           ></span>
 
