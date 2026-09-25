@@ -11,7 +11,7 @@
   Project Settings → API
 */
 
-const SUPABASE_URL = "https://csmizeuuywlonuysktka.supabase.com";
+const SUPABASE_URL = "https://csmizeuuywlonuysktka.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KVMi8il5yurqMPr6DD8PCA_cDEXdcF0";
 
 /* =========================================================
