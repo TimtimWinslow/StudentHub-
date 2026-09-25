@@ -1288,44 +1288,15 @@ async function loadFeed() {
             </button>
 
             <button
-              class="post-action"
-              type="button"
-              data-comment-post="${escapeHtml(post.id)}"
-            >
-              💬 Comment
-            </button>
-
-            ${ownActions}
-
-          </div>
-
-        </article>
-      `;
-    })
-    .join("");
-
-  /*
-    Connect reaction buttons.
-  */
-
-  document
-    .querySelectorAll("[data-react-post]")
-    .forEach((button) => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          const postId =
-            button.dataset.reactPost;
-
-          togglePostReaction(postId);
-
-        }
-      );
-
-    });
-}
+  class="post-action ${
+    reactionInfo.reactedByUser
+      ? "active"
+      : ""
+  }"
+  type="button"
+  data-react-post="${escapeHtml(post.id)}"
+  data-reaction-count="${reactionInfo.count}"
+>
 
 /* =========================================================
    POST REACTIONS
@@ -1339,6 +1310,36 @@ async function togglePostReaction(postId) {
     !postId
   ) {
     return;
+  }
+
+  const button =
+    document.querySelector(
+      `[data-react-post="${postId}"]`
+    );
+
+  if (!button) {
+    return;
+  }
+
+  /*
+    Prevent double-tapping while processing.
+  */
+
+  if (button.dataset.loading === "true") {
+    return;
+  }
+
+  button.dataset.loading = "true";
+
+  const wasReacted =
+    button.classList.contains("active");
+
+  /*
+    Animate the button immediately.
+  */
+
+  if (!wasReacted) {
+    button.classList.add("reaction-pop");
   }
 
   const { data: existingReaction, error: findError } =
@@ -1356,12 +1357,14 @@ async function togglePostReaction(postId) {
       findError
     );
 
+    button.dataset.loading = "false";
     return;
   }
 
+  let success = false;
+
   /*
-    If the student already reacted,
-    remove their reaction.
+    Remove reaction.
   */
 
   if (existingReaction) {
@@ -1377,14 +1380,14 @@ async function togglePostReaction(postId) {
         "Reaction removal error:",
         error
       );
-
-      return;
+    } else {
+      success = true;
     }
 
   }
 
   /*
-    Otherwise add their reaction.
+    Add reaction.
   */
 
   else {
@@ -1403,18 +1406,93 @@ async function togglePostReaction(postId) {
         "Reaction creation error:",
         error
       );
-
-      return;
+    } else {
+      success = true;
     }
 
   }
 
+  if (!success) {
+    button.dataset.loading = "false";
+    button.classList.remove("reaction-pop");
+    return;
+  }
+
   /*
-    Refresh the feed so the count
-    and button state update.
+    Update the button without
+    rebuilding the entire feed.
   */
 
-  await loadFeed();
+  const currentCount =
+    Number(
+      button.dataset.reactionCount || 0
+    );
+
+  const newCount =
+    existingReaction
+      ? Math.max(0, currentCount - 1)
+      : currentCount + 1;
+
+  button.dataset.reactionCount =
+    String(newCount);
+
+  button.classList.toggle(
+    "active",
+    !existingReaction
+  );
+
+  button.innerHTML = `
+    <span class="reaction-heart">
+      ❤️
+    </span>
+
+    <span class="reaction-label">
+      ${
+        existingReaction
+          ? "React"
+          : "Reacted"
+      }
+    </span>
+
+    ${
+      newCount > 0
+        ? `
+          <span class="reaction-count">
+            ${newCount}
+          </span>
+        `
+        : ""
+    }
+  `;
+
+  /*
+    Animate the number change.
+  */
+
+  const count =
+    button.querySelector(
+      ".reaction-count"
+    );
+
+  if (count) {
+    count.classList.add(
+      "reaction-count-pop"
+    );
+
+    setTimeout(() => {
+      count.classList.remove(
+        "reaction-count-pop"
+      );
+    }, 250);
+  }
+
+  setTimeout(() => {
+    button.classList.remove(
+      "reaction-pop"
+    );
+  }, 300);
+
+  button.dataset.loading = "false";
 }
 
 /* =========================================================
@@ -1895,3 +1973,81 @@ document.addEventListener(
   "DOMContentLoaded",
   initializeApp
 );
+
+/* =========================================================
+   SMOOTH REACTION ANIMATIONS
+   ========================================================= */
+
+.post-action[data-react-post] {
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.post-action[data-react-post]:active {
+  transform: scale(0.94);
+}
+
+.post-action[data-react-post].active {
+  transform: scale(1.02);
+}
+
+.reaction-heart {
+  display: inline-block;
+  transition:
+    transform 0.2s ease;
+}
+
+.reaction-pop .reaction-heart {
+  animation: reactionHeartPop 0.3s ease;
+}
+
+.reaction-count {
+  display: inline-block;
+  min-width: 1.2em;
+  margin-left: 3px;
+  text-align: center;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.reaction-count-pop {
+  animation: reactionCountPop 0.25s ease;
+}
+
+@keyframes reactionHeartPop {
+
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.35);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+
+}
+
+@keyframes reactionCountPop {
+
+  0% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+}
