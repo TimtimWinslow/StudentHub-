@@ -22,8 +22,8 @@ let supabaseClient = null;
 
 function initializeSupabase() {
   if (
-    SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY"
+    SUPABASE_URL === "https://csmizeuuywlonuysktka.supabase.com" ||
+    SUPABASE_ANON_KEY === "https://student-hub-five-psi.vercel.app/"
   ) {
     return false;
   }
