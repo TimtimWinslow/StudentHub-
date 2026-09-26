@@ -3311,3 +3311,126 @@ img {
     min-width: 0;
   }
 }
+
+
+/* =========================================================
+   NOTIFICATION CENTER
+   ========================================================= */
+
+.notification-page-header {
+  align-items: flex-start;
+}
+
+.notification-page-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.notification-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.notification-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notification-summary-card span {
+  font-size: 0.85rem;
+  opacity: 0.72;
+}
+
+.notification-summary-card strong {
+  font-size: 1.5rem;
+}
+
+.notification-center-panel {
+  overflow: hidden;
+}
+
+.notification-center-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-center-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.notification-center-item:last-child {
+  border-bottom: 0;
+}
+
+.notification-center-item.unread {
+  background: rgba(255,255,255,0.025);
+}
+
+.notification-center-icon {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.06);
+  font-size: 0.8rem;
+}
+
+.notification-center-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-center-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notification-center-title-row time {
+  font-size: 0.75rem;
+  opacity: 0.62;
+  white-space: nowrap;
+}
+
+.notification-center-content p {
+  margin: 6px 0 8px;
+  line-height: 1.5;
+  opacity: 0.82;
+}
+
+.notification-read-button {
+  padding: 0;
+}
+
+@media (max-width: 720px) {
+  .notification-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-page-header {
+    flex-direction: column;
+  }
+
+  .notification-page-actions {
+    width: 100%;
+  }
+
+  .notification-page-actions .secondary-button {
+    width: 100%;
+  }
+
+  .notification-center-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
