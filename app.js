@@ -1087,6 +1087,10 @@ function getChaptersForClass(classItem = getCurrentClass()) {
 
   const program = getClassProgram(classItem);
   const classId = String(classItem.id || "");
+  const isCurrentCnaClass =
+    isCnaProgram(program) ||
+    (state.classes.length === 1 &&
+      String(state.classes[0]?.id || "") === classId);
 
   return state.chapters.filter((chapter) => {
     const chapterClassId = chapter.class_id ?? chapter.classId ?? null;
@@ -1098,7 +1102,7 @@ function getChaptersForClass(classItem = getCurrentClass()) {
       null;
 
     // Existing chapters are the CNA curriculum.
-    if (isCnaProgram(program)) {
+    if (isCurrentCnaClass) {
       if (chapterClassId && String(chapterClassId) === classId) return true;
       if (chapterProgram) return isCnaProgram(chapterProgram);
       return true;
