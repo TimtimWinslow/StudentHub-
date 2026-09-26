@@ -114,7 +114,14 @@ drop policy if exists "Users can join conversations" on public.conversation_memb
 create policy "Users can join conversations"
 on public.conversation_members for insert
 to authenticated
-with check (auth.uid() = user_id);
+with check (
+  auth.uid() = user_id
+  or exists (
+    select 1 from public.conversations c
+    where c.id = conversation_members.conversation_id
+      and c.created_by = auth.uid()
+  )
+);
 
 drop policy if exists "Users can leave conversations" on public.conversation_members;
 create policy "Users can leave conversations"
