@@ -1926,6 +1926,7 @@ function getPageTitle() {
     calendar: "Calendar",
     assignments: "Assignments",
     notifications: "Notifications",
+    messages: "Messages",
     "care-team": "The Care Team",
     flashcards: "Flashcards",
     "quiz-maker": "Quiz Maker",
@@ -2029,7 +2030,7 @@ function attachShellEvents() {
   $("#messages-button")
     ?.addEventListener(
       "click",
-      () => navigate("care-team")
+      () => navigate("messages")
     );
 
   document
@@ -2128,6 +2129,9 @@ function renderPageContent() {
     case "notifications":
       return renderNotificationPage();
 
+    case "messages":
+      return renderMessagesPage();
+
     case "care-team":
       return renderCareTeam();
 
@@ -2172,6 +2176,10 @@ async function hydratePage(page) {
 
   if (page === "notifications") {
     await hydrateNotificationsPage();
+  }
+
+  if (page === "messages") {
+    await hydrateMessages();
   }
 
   if (page === "care-team") {
@@ -3022,109 +3030,181 @@ function isMessagePinned(messageId) {
 }
 
 function renderCareTeam() {
-  const current = state.conversations.find(
+  const group = state.conversations.find(
     (conversation) =>
-      conversation.id === state.currentConversationId
+      conversation.type === "group" &&
+      conversation.name === "The Care Team"
   );
-
-  const isGroup =
-    current?.type === "group";
-
-  const title =
-    isGroup
-      ? "The Care Team"
-      : (
-          current?.otherMember?.display_name ||
-          current?.otherMember?.full_name ||
-          "Direct Message"
-        );
-
-  const subtitle =
-    isGroup
-      ? "Your CNA class group chat."
-      : "Private conversation";
 
   return `
     <section class="page">
+      <div class="page-header">
+        <div>
+          <p class="eyebrow">GROUP CHAT</p>
+          <h1>The Care Team</h1>
+          <p>Your CNA class group chat.</p>
+        </div>
+      </div>
 
+      <div class="panel care-team-panel">
+        <div class="conversation-header">
+          <div class="conversation-header-avatar">💬</div>
+          <div>
+            <strong>The Care Team</strong>
+            <span>${group ? "Class group chat" : "Group chat"}</span>
+          </div>
+        </div>
+
+        <div class="care-team-messages" id="care-team-messages">
+          ${renderCareMessages()}
+        </div>
+
+        <form id="care-message-form" class="care-message-form">
+          <input
+            id="care-message-input"
+            class="text-input"
+            type="text"
+            maxlength="2000"
+            placeholder="Message The Care Team..."
+            autocomplete="off"
+            required
+          />
+          <button class="primary-button" type="submit">Send</button>
+        </form>
+      </div>
+    </section>
+  `;
+}
+
+function renderMessagesPage() {
+  return `
+    <section class="page">
       <div class="page-header">
         <div>
           <p class="eyebrow">MESSAGES</p>
-          <h1>The Care Team</h1>
-          <p>Group chat and one-on-one messages with your CNA classmates.</p>
+          <h1>Messages</h1>
+          <p>Message your CNA classmates one-on-one.</p>
         </div>
       </div>
 
-      <div class="messages-layout">
-
-        <aside class="conversation-sidebar panel">
-          <div class="conversation-sidebar-header">
-            <div>
-              <strong>Messages</strong>
-              <span>Stay connected</span>
-            </div>
-            <button
-              class="secondary-button small-button"
-              id="new-message-button"
-              type="button"
-            >
-              + New
-            </button>
+      <div class="panel messages-page-panel">
+        <div class="messages-page-header">
+          <div>
+            <strong>Your conversations</strong>
+            <span>Private messages with classmates</span>
           </div>
-
-          <div class="conversation-list">
-            ${renderConversationList()}
-          </div>
-
-          ${state.showNewMessage ? renderNewMessageList() : ""}
-        </aside>
-
-        <div class="panel care-team-panel">
-
-          <div class="conversation-header">
-            <div class="conversation-header-avatar">
-              ${isGroup ? "💬" : escapeHtml(getInitials(title))}
-            </div>
-            <div>
-              <strong>${escapeHtml(title)}</strong>
-              <span>${escapeHtml(subtitle)}</span>
-            </div>
-          </div>
-
-          <div
-            class="care-team-messages"
-            id="care-team-messages"
-          >
-            ${renderCareMessages()}
-          </div>
-
-          <form
-            id="care-message-form"
-            class="care-message-form"
-          >
-            <input
-              id="care-message-input"
-              class="text-input"
-              type="text"
-              maxlength="2000"
-              placeholder="${isGroup ? "Message The Care Team..." : "Write a private message..."}"
-              autocomplete="off"
-              required
-            />
-
-            <button
-              class="primary-button"
-              type="submit"
-            >
-              Send
-            </button>
-          </form>
-
+          <button class="secondary-button small-button" id="messages-new-button" type="button">
+            + New Message
+          </button>
         </div>
-      </div>
 
+        <div id="messages-conversation-list">
+          ${renderDirectConversationList()}
+        </div>
+
+        ${state.showNewMessage ? renderNewMessageList() : ""}
+      </div>
     </section>
   `;
+}
+
+function renderDirectConversationList() {
+  const direct = state.conversations
+    .filter((conversation) => conversation.type === "direct")
+    .sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.created_at).getTime();
+      const bTime = new Date(b.updated_at || b.created_at).getTime();
+      return bTime - aTime;
+    });
+
+  if (!direct.length) {
+    return `
+      <div class="conversation-empty">
+        <div class="empty-icon">💬</div>
+        <h3>No direct messages yet</h3>
+        <p>Start a private conversation with a classmate.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="conversation-list messages-page-list">
+      ${direct.map((conversation) => {
+        const name =
+          conversation.otherMember?.display_name ||
+          conversation.otherMember?.full_name ||
+          "Classmate";
+
+        return `
+          <button
+            class="conversation-item"
+            data-conversation-id="${escapeHtml(conversation.id)}"
+            type="button"
+          >
+            <span class="conversation-avatar">
+              ${conversation.otherMember?.avatar_url
+                ? `<img src="${escapeHtml(conversation.otherMember.avatar_url)}" alt="" />`
+                : escapeHtml(getInitials(name))}
+            </span>
+            <span class="conversation-item-text">
+              <strong>${escapeHtml(name)}</strong>
+              <small>Private message</small>
+            </span>
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+async function hydrateMessages() {
+  await loadCareConversations();
+  await loadClassmates();
+
+  const container = $("#page-container");
+  if (!container) return;
+
+  container.innerHTML = renderMessagesPage();
+
+  $("#messages-new-button")?.addEventListener("click", async () => {
+    state.showNewMessage = true;
+    await hydrateMessages();
+  });
+
+  $("#close-new-message")?.addEventListener("click", async () => {
+    state.showNewMessage = false;
+    await hydrateMessages();
+  });
+
+  document.querySelectorAll("[data-start-dm]").forEach((button) => {
+    button.addEventListener("click", () =>
+      startDirectMessage(button.dataset.startDm)
+    );
+  });
+
+  document.querySelectorAll("[data-conversation-id]").forEach((button) => {
+    button.addEventListener("click", () =>
+      openConversation(button.dataset.conversationId)
+    );
+  });
+
+  $("#classmate-search")?.addEventListener("input", (event) => {
+    const query = event.target.value.trim().toLowerCase();
+    const list = $("#classmate-list");
+    const filtered = state.classmates.filter((classmate) => {
+      const name =
+        classmate.display_name ||
+        classmate.full_name ||
+        "";
+      return name.toLowerCase().includes(query);
+    });
+    if (list) list.innerHTML = renderClassmateList(filtered);
+    document.querySelectorAll("[data-start-dm]").forEach((button) => {
+      button.addEventListener("click", () =>
+        startDirectMessage(button.dataset.startDm)
+      );
+    });
+  });
 }
 
 function renderConversationList() {
@@ -3382,7 +3462,96 @@ function renderCareMessage(message) {
 async function openConversation(conversationId) {
   state.currentConversationId = conversationId;
   state.showNewMessage = false;
-  await hydrateCareTeam();
+  const conversation = state.conversations.find(
+    (item) => item.id === conversationId
+  );
+  if (conversation?.type === "direct") {
+    await hydrateDirectMessage();
+  } else {
+    await hydrateCareTeam();
+  }
+}
+
+function renderDirectMessageConversation() {
+  const conversation = state.conversations.find(
+    (item) => item.id === state.currentConversationId
+  );
+
+  const name =
+    conversation?.otherMember?.display_name ||
+    conversation?.otherMember?.full_name ||
+    "Classmate";
+
+  return `
+    <section class="page">
+      <div class="page-header">
+        <div>
+          <p class="eyebrow">MESSAGES</p>
+          <h1>${escapeHtml(name)}</h1>
+          <p>Private conversation.</p>
+        </div>
+        <button class="secondary-button small-button" id="back-to-messages" type="button">← Messages</button>
+      </div>
+
+      <div class="panel care-team-panel">
+        <div class="conversation-header">
+          <div class="conversation-header-avatar">
+            ${conversation?.otherMember?.avatar_url
+              ? `<img src="${escapeHtml(conversation.otherMember.avatar_url)}" alt="" />`
+              : escapeHtml(getInitials(name))}
+          </div>
+          <div>
+            <strong>${escapeHtml(name)}</strong>
+            <span>Private message</span>
+          </div>
+        </div>
+
+        <div class="care-team-messages" id="care-team-messages">
+          ${renderCareMessages()}
+        </div>
+
+        <form id="care-message-form" class="care-message-form">
+          <input
+            id="care-message-input"
+            class="text-input"
+            type="text"
+            maxlength="2000"
+            placeholder="Write a private message..."
+            autocomplete="off"
+            required
+          />
+          <button class="primary-button" type="submit">Send</button>
+        </form>
+      </div>
+    </section>
+  `;
+}
+
+async function hydrateDirectMessage() {
+  await loadCareMessages();
+  await loadPinnedMessages();
+  await loadMessageReactions();
+
+  const container = $("#page-container");
+  if (!container) return;
+
+  container.innerHTML = renderDirectMessageConversation();
+
+  $("#back-to-messages")?.addEventListener("click", () => navigate("messages"));
+  $("#care-message-form")?.addEventListener("submit", handleCareMessageSubmit);
+
+  document.querySelectorAll("[data-edit-message]").forEach((button) => {
+    button.addEventListener("click", () => editCareMessage(button.dataset.editMessage));
+  });
+  document.querySelectorAll("[data-delete-message]").forEach((button) => {
+    button.addEventListener("click", () => deleteCareMessage(button.dataset.deleteMessage));
+  });
+  document.querySelectorAll("[data-react-message]").forEach((button) => {
+    button.addEventListener("click", () => toggleMessageReaction(button.dataset.reactMessage));
+  });
+  document.querySelectorAll("[data-pin-message]").forEach((button) => {
+    button.addEventListener("click", () => togglePinnedMessage(button.dataset.pinMessage));
+  });
 }
 
 async function startDirectMessage(targetUserId) {
