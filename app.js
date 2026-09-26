@@ -2504,219 +2504,153 @@ function renderAcademicStatus() {
    ========================================================= */
 
 async function loadCalendarEvents() {
-  if (!supabaseClient || !state.user)
-    return [];
+  if (!supabaseClient || !state.user) return [];
 
-  const {
-    data,
-    error
-  } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from("calendar_events")
     .select("*")
-    .order("start_time", {
-      ascending: true
-    });
+    .order("start_time", { ascending: true });
 
   if (error) {
-    console.error(
-      "Calendar load error:",
-      error
-    );
-
+    console.error("Calendar load error:", error);
     state.calendarEvents = [];
-
     return [];
   }
 
-  state.calendarEvents =
-    data || [];
-
+  state.calendarEvents = data || [];
   return state.calendarEvents;
 }
 
+function getCalendarMonthDays(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const first = new Date(year, month, 1);
+  const startDay = first.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days = [];
+
+  for (let i = 0; i < startDay; i++) days.push(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    days.push(new Date(year, month, day));
+  }
+
+  while (days.length % 7 !== 0) days.push(null);
+  return days;
+}
+
 function renderCalendar() {
-  const date =
-    state.calendarDate;
+  const date = state.calendarDate;
 
   return `
     <section class="page">
-
       <div class="page-header">
-
         <div>
+          <p class="eyebrow">STUDENTHUB</p>
+          <h1>Calendar</h1>
+          <p>Keep track of tests, class events, assignments, and important dates.</p>
+        </div>
+        <button class="primary-button" id="add-calendar-event">+ Add Event</button>
+      </div>
 
-          <p class="eyebrow">
-            STUDENTHUB
-          </p>
-
-          <h1>
-            Calendar
-          </h1>
-
-          <p>
-            Keep track of tests, class events,
-            and important dates.
-          </p>
-
+      <div class="panel calendar-panel">
+        <div class="calendar-toolbar">
+          <button class="secondary-button" id="calendar-prev">←</button>
+          <h2>${date.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h2>
+          <button class="secondary-button" id="calendar-next">→</button>
         </div>
 
-        <button
-          class="primary-button"
-          id="add-calendar-event"
-        >
-          + Add Event
-        </button>
+        <div class="calendar-weekdays">
+          ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(day => `<span>${day}</span>`).join("")}
+        </div>
 
+        <div class="calendar-grid">
+          ${renderCalendarDays()}
+        </div>
       </div>
 
       <div class="panel">
-
-        <div class="calendar-toolbar">
-
-          <button
-            class="secondary-button"
-            id="calendar-prev"
-          >
-            ←
-          </button>
-
-          <h2>
-            ${date.toLocaleDateString(
-              undefined,
-              {
-                month: "long",
-                year: "numeric"
-              }
-            )}
-          </h2>
-
-          <button
-            class="secondary-button"
-            id="calendar-next"
-          >
-            →
-          </button>
-
+        <div class="panel-header">
+          <div><span class="panel-icon">📅</span><h2>This Month</h2></div>
         </div>
-
         <div id="calendar-events">
           ${renderCalendarEvents()}
         </div>
-
       </div>
-
     </section>
   `;
 }
 
-function renderCalendarEvents() {
-  if (!state.calendarEvents.length) {
+function renderCalendarDays() {
+  const today = new Date();
+  const month = state.calendarDate.getMonth();
+  const year = state.calendarDate.getFullYear();
+  const days = getCalendarMonthDays(state.calendarDate);
+
+  return days.map(day => {
+    if (!day) return '<div class="calendar-day calendar-day-empty"></div>';
+
+    const dayEvents = state.calendarEvents.filter(event => {
+      const value = new Date(event.start_time || event.event_date || event.created_at);
+      return value.getFullYear() === year &&
+        value.getMonth() === month &&
+        value.getDate() === day.getDate();
+    });
+
+    const isToday =
+      day.getFullYear() === today.getFullYear() &&
+      day.getMonth() === today.getMonth() &&
+      day.getDate() === today.getDate();
+
     return `
-      <div class="empty-state">
-
-        <div class="empty-icon">
-          📅
+      <div class="calendar-day ${isToday ? "calendar-day-today" : ""}">
+        <div class="calendar-day-number">${day.getDate()}</div>
+        <div class="calendar-day-events">
+          ${dayEvents.slice(0, 3).map(event => `
+            <div class="calendar-day-event" title="${escapeHtml(event.title || "Event")}">
+              ${escapeHtml(event.title || "Event")}
+            </div>
+          `).join("")}
+          ${dayEvents.length > 3 ? `<div class="calendar-more">+${dayEvents.length - 3} more</div>` : ""}
         </div>
-
-        <h3>
-          No calendar events
-        </h3>
-
-        <p>
-          Add an event to get started.
-        </p>
-
       </div>
     `;
-  }
+  }).join("");
+}
 
-  const month =
-    state.calendarDate.getMonth();
+function renderCalendarEvents() {
+  const month = state.calendarDate.getMonth();
+  const year = state.calendarDate.getFullYear();
 
-  const year =
-    state.calendarDate.getFullYear();
-
-  const events =
-    state.calendarEvents.filter(
-      (event) => {
-        const value =
-          new Date(
-            event.start_time ||
-            event.event_date ||
-            event.created_at
-          );
-
-        return (
-          value.getMonth() ===
-            month &&
-          value.getFullYear() ===
-            year
-        );
-      }
-    );
+  const events = state.calendarEvents.filter(event => {
+    const value = new Date(event.start_time || event.event_date || event.created_at);
+    return value.getMonth() === month && value.getFullYear() === year;
+  });
 
   if (!events.length) {
     return `
       <div class="empty-state">
         <div class="empty-icon">📅</div>
-        <p>
-          No events this month.
-        </p>
+        <h3>No events this month</h3>
+        <p>Add an event to get started.</p>
       </div>
     `;
   }
 
   return `
     <div class="calendar-event-list">
-
-      ${events
-        .map(
-          (event) => `
-            <div class="calendar-event-card">
-
-              <div class="calendar-event-date">
-                ${formatDate(
-                  event.start_time ||
-                  event.event_date
-                )}
-              </div>
-
-              <div>
-
-                <strong>
-                  ${escapeHtml(
-                    event.title ||
-                    event.name ||
-                    "Calendar Event"
-                  )}
-                </strong>
-
-                <p>
-                  ${escapeHtml(
-                    event.description ||
-                    ""
-                  )}
-                </p>
-
-                ${
-                  event.start_time
-                    ? `
-                      <small>
-                        ${formatTime(
-                          event.start_time
-                        )}
-                      </small>
-                    `
-                    : ""
-                }
-
-              </div>
-
-            </div>
-          `
-        )
-        .join("")}
-
+      ${events.map(event => `
+        <article class="calendar-event-card">
+          <div class="calendar-event-date">
+            ${formatDate(event.start_time || event.event_date)}
+          </div>
+          <div class="calendar-event-content">
+            <strong>${escapeHtml(event.title || event.name || "Calendar Event")}</strong>
+            <p>${escapeHtml(event.description || "")}</p>
+            ${event.start_time ? `<small>🕐 ${formatTime(event.start_time)}</small>` : ""}
+            ${event.location ? `<small>📍 ${escapeHtml(event.location)}</small>` : ""}
+          </div>
+        </article>
+      `).join("")}
     </div>
   `;
 }
@@ -2724,111 +2658,71 @@ function renderCalendarEvents() {
 async function hydrateCalendar() {
   await loadCalendarEvents();
 
-  const container =
-    $("#page-container");
-
+  const container = $("#page-container");
   if (!container) return;
 
-  container.innerHTML =
-    renderCalendar();
+  container.innerHTML = renderCalendar();
 
-  $("#calendar-prev")
-    ?.addEventListener(
-      "click",
-      async () => {
-        state.calendarDate =
-          new Date(
-            state.calendarDate.getFullYear(),
-            state.calendarDate.getMonth() - 1,
-            1
-          );
-
-        await navigate("calendar");
-      }
+  $("#calendar-prev")?.addEventListener("click", async () => {
+    state.calendarDate = new Date(
+      state.calendarDate.getFullYear(),
+      state.calendarDate.getMonth() - 1,
+      1
     );
+    await navigate("calendar");
+  });
 
-  $("#calendar-next")
-    ?.addEventListener(
-      "click",
-      async () => {
-        state.calendarDate =
-          new Date(
-            state.calendarDate.getFullYear(),
-            state.calendarDate.getMonth() + 1,
-            1
-          );
-
-        await navigate("calendar");
-      }
+  $("#calendar-next")?.addEventListener("click", async () => {
+    state.calendarDate = new Date(
+      state.calendarDate.getFullYear(),
+      state.calendarDate.getMonth() + 1,
+      1
     );
+    await navigate("calendar");
+  });
 
-  $("#add-calendar-event")
-    ?.addEventListener(
-      "click",
-      addCalendarEvent
-    );
+  $("#add-calendar-event")?.addEventListener("click", addCalendarEvent);
 }
 
 async function addCalendarEvent() {
-  if (!supabaseClient || !state.user)
-    return;
+  if (!supabaseClient || !state.user) return;
 
-  const title =
-    prompt("Event title:");
-
+  const title = prompt("Event title:");
   if (!title?.trim()) return;
 
-  const date =
-    prompt(
-      "Event date (YYYY-MM-DD):",
-      new Date()
-        .toISOString()
-        .split("T")[0]
-    );
-
+  const date = prompt(
+    "Event date (YYYY-MM-DD):",
+    new Date().toISOString().split("T")[0]
+  );
   if (!date) return;
 
-  const description =
-    prompt(
-      "Description (optional):"
-    );
+  const description = prompt("Description (optional):");
+  const location = prompt("Location (optional):");
 
   const payload = {
+    user_id: state.user.id,
     title: title.trim(),
-    description:
-      description?.trim() || null,
-    start_time:
-      `${date}T12:00:00`,
-    created_by:
-      state.user.id
+    description: description?.trim() || null,
+    start_time: `${date}T12:00:00`,
+    location: location?.trim() || null,
+    created_by: state.user.id
   };
 
-  let result =
-    await supabaseClient
-      .from("calendar_events")
-      .insert(payload);
+  let result = await supabaseClient.from("calendar_events").insert(payload);
 
   if (result.error) {
-    delete payload.created_by;
-
-    result =
-      await supabaseClient
-        .from("calendar_events")
-        .insert(payload);
+    const fallback = { ...payload };
+    delete fallback.user_id;
+    delete fallback.location;
+    result = await supabaseClient.from("calendar_events").insert(fallback);
   }
 
   if (result.error) {
-    showMessage(
-      result.error.message ||
-      "Unable to create event.",
-      "error"
-    );
-
+    showMessage(result.error.message || "Unable to create event.", "error");
     return;
   }
 
   showMessage("Calendar event added.");
-
   await navigate("calendar");
 }
 
