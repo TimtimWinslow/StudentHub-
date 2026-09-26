@@ -2,17 +2,11 @@
    STUDENTHUB — APP ENGINE
    ========================================================= */
 
-/*
-  IMPORTANT:
-  Replace these two values with your existing Supabase
-  project URL and anon/public key.
+const SUPABASE_URL =
+  "https://csmizeuuywlonuysktka.supabase.co";
 
-  Supabase Dashboard:
-  Project Settings → API
-*/
-
-const SUPABASE_URL = "https://csmizeuuywlonuysktka.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_KVMi8il5yurqMPr6DD8PCA_cDEXdcF0";
+const SUPABASE_ANON_KEY =
+  "sb_publishable_KVMi8il5yurqMPr6DD8PCA_cDEXdcF0";
 
 /* =========================================================
    SUPABASE
@@ -21,10 +15,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_KVMi8il5yurqMPr6DD8PCA_cDEXdcF0";
 let supabaseClient = null;
 
 function initializeSupabase() {
-  if (
-  !SUPABASE_URL ||
-  !SUPABASE_ANON_KEY
-) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return false;
   }
 
@@ -75,13 +66,8 @@ function escapeHtml(value) {
 function getGreeting() {
   const hour = new Date().getHours();
 
-  if (hour < 12) {
-    return "Good morning";
-  }
-
-  if (hour < 18) {
-    return "Good afternoon";
-  }
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
 
   return "Good evening";
 }
@@ -111,9 +97,7 @@ function getInitials(name) {
     .split(/\s+/)
     .filter(Boolean);
 
-  if (!parts.length) {
-    return "?";
-  }
+  if (!parts.length) return "?";
 
   if (parts.length === 1) {
     return parts[0].charAt(0).toUpperCase();
@@ -125,12 +109,37 @@ function getInitials(name) {
   ).toUpperCase();
 }
 
+function setText(id, value) {
+  const element = document.getElementById(id);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function formatDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
 /* =========================================================
    LOADING
    ========================================================= */
 
 function showLoading() {
-  document.getElementById("app").innerHTML = `
+  const app = document.getElementById("app");
+
+  if (!app) return;
+
+  app.innerHTML = `
     <div class="loading-screen">
       <div class="loading-spinner"></div>
     </div>
@@ -142,8 +151,13 @@ function showLoading() {
    ========================================================= */
 
 function renderLoginPage(message = "") {
-  document.getElementById("app").innerHTML = `
+  const app = document.getElementById("app");
+
+  if (!app) return;
+
+  app.innerHTML = `
     <main class="auth-page">
+
       <section class="auth-card">
 
         <div class="auth-logo">🎓</div>
@@ -157,6 +171,7 @@ function renderLoginPage(message = "") {
         <form id="login-form" class="auth-form">
 
           <div class="form-group">
+
             <label for="login-email">
               Email
             </label>
@@ -168,9 +183,11 @@ function renderLoginPage(message = "") {
               placeholder="you@example.com"
               required
             />
+
           </div>
 
           <div class="form-group">
+
             <label for="login-password">
               Password
             </label>
@@ -182,6 +199,7 @@ function renderLoginPage(message = "") {
               placeholder="Enter your password"
               required
             />
+
           </div>
 
           <button
@@ -201,12 +219,16 @@ function renderLoginPage(message = "") {
         </div>
 
       </section>
+
     </main>
   `;
 
   document
     .getElementById("login-form")
-    .addEventListener("submit", handleLogin);
+    ?.addEventListener(
+      "submit",
+      handleLogin
+    );
 }
 
 /* =========================================================
@@ -217,24 +239,33 @@ async function handleLogin(event) {
   event.preventDefault();
 
   const email =
-    document.getElementById("login-email").value.trim();
+    document.getElementById("login-email")
+      ?.value
+      .trim();
 
   const password =
-    document.getElementById("login-password").value;
+    document.getElementById("login-password")
+      ?.value;
 
   const message =
     document.getElementById("auth-message");
+
+  if (!message) return;
 
   try {
     if (!supabaseClient) {
       message.textContent =
         "Supabase is not configured yet.";
+
       return;
     }
 
     message.textContent = "Signing in...";
 
-    const { data, error } =
+    const {
+      data,
+      error
+    } =
       await supabaseClient.auth.signInWithPassword({
         email,
         password
@@ -243,20 +274,28 @@ async function handleLogin(event) {
     if (error) {
       message.textContent =
         "Login error: " + error.message;
+
       return;
     }
 
     state.session = data.session;
     state.user = data.user;
 
-    message.textContent = "Login successful. Loading your StudentHub...";
+    message.textContent =
+      "Login successful. Loading StudentHub...";
 
     await loadProfile();
 
     renderApp();
 
+    await loadHomepageData();
+
   } catch (error) {
-    console.error("StudentHub login/load error:", error);
+
+    console.error(
+      "StudentHub login error:",
+      error
+    );
 
     message.textContent =
       "StudentHub error: " +
@@ -273,13 +312,10 @@ async function loadProfile() {
     return;
   }
 
-  /*
-    We use the existing profiles table.
-    If your existing profile columns differ,
-    we will adjust this after testing.
-  */
-
-  const { data, error } =
+  const {
+    data,
+    error
+  } =
     await supabaseClient
       .from("profiles")
       .select("*")
@@ -303,7 +339,11 @@ async function loadProfile() {
    ========================================================= */
 
 function renderApp() {
-  document.getElementById("app").innerHTML = `
+  const app = document.getElementById("app");
+
+  if (!app) return;
+
+  app.innerHTML = `
     <div class="app-shell">
 
       ${renderSidebar()}
@@ -344,7 +384,9 @@ function renderSidebar() {
     <aside
       id="sidebar"
       class="sidebar ${
-        state.mobileMenuOpen ? "open" : ""
+        state.mobileMenuOpen
+          ? "open"
+          : ""
       }"
     >
 
@@ -369,22 +411,33 @@ function renderSidebar() {
               : ""
           }"
           data-page="home"
+          type="button"
         >
           <span class="nav-icon">🏠</span>
           <span>Home</span>
         </button>
 
         <button
-          class="nav-item"
+          class="nav-item ${
+            state.currentPage === "calendar"
+              ? "active"
+              : ""
+          }"
           data-page="calendar"
+          type="button"
         >
           <span class="nav-icon">📅</span>
           <span>Calendar</span>
         </button>
 
         <button
-          class="nav-item"
+          class="nav-item ${
+            state.currentPage === "care-team"
+              ? "active"
+              : ""
+          }"
           data-page="care-team"
+          type="button"
         >
           <span class="nav-icon">💬</span>
           <span>The Care Team</span>
@@ -401,6 +454,7 @@ function renderSidebar() {
         <button
           id="study-toggle"
           class="nav-item study-toggle"
+          type="button"
         >
 
           <span class="study-toggle-left">
@@ -410,7 +464,9 @@ function renderSidebar() {
 
           <span
             class="study-arrow ${
-              state.studyToolsOpen ? "open" : ""
+              state.studyToolsOpen
+                ? "open"
+                : ""
             }"
           >
             ▼
@@ -420,13 +476,16 @@ function renderSidebar() {
 
         <div
           class="study-submenu ${
-            state.studyToolsOpen ? "open" : ""
+            state.studyToolsOpen
+              ? "open"
+              : ""
           }"
         >
 
           <button
             class="subnav-item"
             data-page="flashcards"
+            type="button"
           >
             🧠 Flashcards
           </button>
@@ -434,6 +493,7 @@ function renderSidebar() {
           <button
             class="subnav-item"
             data-page="quiz-maker"
+            type="button"
           >
             📝 Quiz Maker
           </button>
@@ -441,6 +501,7 @@ function renderSidebar() {
           <button
             class="subnav-item"
             data-page="study-timer"
+            type="button"
           >
             ⏱️ Study Timer
           </button>
@@ -448,13 +509,19 @@ function renderSidebar() {
           <button
             class="subnav-item"
             data-page="study-checklist"
+            type="button"
           >
             ✅ Study Checklist
           </button>
 
           <button
-            class="subnav-item"
+            class="subnav-item ${
+              state.currentPage === "chapter-tracker"
+                ? "active"
+                : ""
+            }"
             data-page="chapter-tracker"
+            type="button"
           >
             📖 Chapter Tracker
           </button>
@@ -466,8 +533,13 @@ function renderSidebar() {
       <div class="sidebar-section">
 
         <button
-          class="nav-item"
+          class="nav-item ${
+            state.currentPage === "progress"
+              ? "active"
+              : ""
+          }"
           data-page="progress"
+          type="button"
         >
           <span class="nav-icon">📈</span>
           <span>Progress</span>
@@ -491,6 +563,7 @@ function renderTopbar() {
         id="mobile-menu-button"
         class="mobile-menu-button"
         aria-label="Open menu"
+        type="button"
       >
         ☰
       </button>
@@ -501,6 +574,7 @@ function renderTopbar() {
           id="account-button"
           class="topbar-button"
           title="Account"
+          type="button"
         >
           👤
         </button>
@@ -509,6 +583,7 @@ function renderTopbar() {
           id="messages-button"
           class="topbar-button"
           title="Messages"
+          type="button"
         >
           💬
         </button>
@@ -517,6 +592,7 @@ function renderTopbar() {
           id="notifications-button"
           class="topbar-button"
           title="Notifications"
+          type="button"
         >
           🔔
 
@@ -527,6 +603,7 @@ function renderTopbar() {
           >
             0
           </span>
+
         </button>
 
       </div>
@@ -549,6 +626,7 @@ function renderAccountMenu() {
       <button
         class="account-menu-item"
         data-account="profile"
+        type="button"
       >
         👤 My Profile
       </button>
@@ -556,6 +634,7 @@ function renderAccountMenu() {
       <button
         class="account-menu-item"
         data-account="details"
+        type="button"
       >
         ⚙️ Account Details
       </button>
@@ -563,6 +642,7 @@ function renderAccountMenu() {
       <button
         class="account-menu-item"
         data-account="security"
+        type="button"
       >
         🔐 Password & Security
       </button>
@@ -570,6 +650,7 @@ function renderAccountMenu() {
       <button
         class="account-menu-item"
         data-account="privacy"
+        type="button"
       >
         🛡️ Privacy
       </button>
@@ -577,6 +658,7 @@ function renderAccountMenu() {
       <button
         class="account-menu-item"
         data-account="appearance"
+        type="button"
       >
         🎨 Appearance
       </button>
@@ -584,6 +666,7 @@ function renderAccountMenu() {
       <button
         class="account-menu-item"
         data-account="export"
+        type="button"
       >
         📦 Export My Data
       </button>
@@ -593,6 +676,7 @@ function renderAccountMenu() {
       <button
         id="sign-out-button"
         class="account-menu-item"
+        type="button"
       >
         🚪 Sign Out
       </button>
@@ -658,7 +742,6 @@ function renderStatusPanel() {
             <span class="status-label">
               Overall Progress
             </span>
-
             <span
               id="status-progress"
               class="status-value"
@@ -671,7 +754,6 @@ function renderStatusPanel() {
             <span class="status-label">
               Overall Average
             </span>
-
             <span
               id="status-average"
               class="status-value"
@@ -684,7 +766,6 @@ function renderStatusPanel() {
             <span class="status-label">
               GPA
             </span>
-
             <span
               id="status-gpa"
               class="status-value"
@@ -697,7 +778,6 @@ function renderStatusPanel() {
             <span class="status-label">
               Letter Grade
             </span>
-
             <span
               id="status-grade"
               class="status-value"
@@ -710,7 +790,6 @@ function renderStatusPanel() {
             <span class="status-label">
               Score Consistency
             </span>
-
             <span
               id="status-consistency"
               class="status-value"
@@ -723,7 +802,6 @@ function renderStatusPanel() {
             <span class="status-label">
               Tests Completed
             </span>
-
             <span
               id="status-tests"
               class="status-value"
@@ -736,7 +814,6 @@ function renderStatusPanel() {
             <span class="status-label">
               Latest Score
             </span>
-
             <span
               id="status-latest"
               class="status-value"
@@ -749,7 +826,6 @@ function renderStatusPanel() {
             <span class="status-label">
               Current Chapter
             </span>
-
             <span
               id="status-chapter"
               class="status-value"
@@ -775,12 +851,17 @@ function renderFeedPanel() {
     <section class="panel feed-panel">
 
       <div class="panel-header">
+
         <div>
+
           <h2>📰 Main Feed</h2>
+
           <p class="panel-subtitle">
             Stay connected with your class.
           </p>
+
         </div>
+
       </div>
 
       <div class="panel-body">
@@ -840,12 +921,17 @@ function renderActivePanel() {
     <section class="panel active-panel">
 
       <div class="panel-header">
+
         <div>
+
           <h2>🟢 Who's Active</h2>
+
           <p class="panel-subtitle">
             See who's currently around StudentHub.
           </p>
+
         </div>
+
       </div>
 
       <div class="panel-body">
@@ -854,11 +940,9 @@ function renderActivePanel() {
           id="active-user-list"
           class="active-list"
         >
-
           <div class="empty-state">
             Loading active users...
           </div>
-
         </div>
 
         <button
@@ -876,7 +960,7 @@ function renderActivePanel() {
 }
 
 /* =========================================================
-   APP EVENT LISTENERS
+   EVENT LISTENERS
    ========================================================= */
 
 function attachAppListeners() {
@@ -885,29 +969,36 @@ function attachAppListeners() {
     .querySelectorAll("[data-page]")
     .forEach((button) => {
 
-      button.addEventListener("click", () => {
+      button.addEventListener(
+        "click",
+        () => {
 
-        state.currentPage =
-          button.dataset.page;
+          state.currentPage =
+            button.dataset.page;
 
-        state.mobileMenuOpen = false;
+          state.mobileMenuOpen = false;
+          state.accountMenuOpen = false;
 
-        renderApp();
+          renderApp();
 
-        if (
-          state.currentPage === "home"
-        ) {
-          loadHomepageData();
+          if (
+            state.currentPage === "home"
+          ) {
+            loadHomepageData();
+          }
+
         }
-
-      });
+      );
 
     });
 
   const studyToggle =
-    document.getElementById("study-toggle");
+    document.getElementById(
+      "study-toggle"
+    );
 
   if (studyToggle) {
+
     studyToggle.addEventListener(
       "click",
       () => {
@@ -919,12 +1010,16 @@ function attachAppListeners() {
 
       }
     );
+
   }
 
   const accountButton =
-    document.getElementById("account-button");
+    document.getElementById(
+      "account-button"
+    );
 
   if (accountButton) {
+
     accountButton.addEventListener(
       "click",
       () => {
@@ -936,6 +1031,7 @@ function attachAppListeners() {
 
       }
     );
+
   }
 
   const signOutButton =
@@ -956,6 +1052,7 @@ function attachAppListeners() {
     );
 
   if (mobileMenuButton) {
+
     mobileMenuButton.addEventListener(
       "click",
       () => {
@@ -967,6 +1064,7 @@ function attachAppListeners() {
 
       }
     );
+
   }
 
   const overlay =
@@ -975,6 +1073,7 @@ function attachAppListeners() {
     );
 
   if (overlay) {
+
     overlay.addEventListener(
       "click",
       () => {
@@ -985,6 +1084,7 @@ function attachAppListeners() {
 
       }
     );
+
   }
 
   const createPostButton =
@@ -993,11 +1093,35 @@ function attachAppListeners() {
     );
 
   if (createPostButton) {
+
     createPostButton.addEventListener(
       "click",
       createPost
     );
+
   }
+
+  /*
+    IMPORTANT:
+    Connect reaction buttons.
+  */
+
+  document
+    .querySelectorAll("[data-react-post]")
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          togglePostReaction(
+            button.dataset.reactPost
+          );
+
+        }
+      );
+
+    });
 
   const messagesButton =
     document.getElementById(
@@ -1005,10 +1129,12 @@ function attachAppListeners() {
     );
 
   if (messagesButton) {
+
     messagesButton.addEventListener(
       "click",
       () => navigateTo("care-team")
     );
+
   }
 
   const notificationsButton =
@@ -1017,6 +1143,7 @@ function attachAppListeners() {
     );
 
   if (notificationsButton) {
+
     notificationsButton.addEventListener(
       "click",
       () => {
@@ -1027,6 +1154,7 @@ function attachAppListeners() {
 
       }
     );
+
   }
 }
 
@@ -1035,11 +1163,16 @@ function attachAppListeners() {
    ========================================================= */
 
 function navigateTo(page) {
+
   state.currentPage = page;
   state.accountMenuOpen = false;
   state.mobileMenuOpen = false;
 
   renderApp();
+
+  if (page === "home") {
+    loadHomepageData();
+  }
 }
 
 /* =========================================================
@@ -1047,6 +1180,7 @@ function navigateTo(page) {
    ========================================================= */
 
 async function signOut() {
+
   if (!supabaseClient) {
     return;
   }
@@ -1061,12 +1195,15 @@ async function signOut() {
 }
 
 /* =========================================================
-   FEED DATA
+   FEED — LOAD
    ========================================================= */
 
 async function loadFeed() {
+
   const feedList =
-    document.getElementById("feed-list");
+    document.getElementById(
+      "feed-list"
+    );
 
   if (!feedList || !supabaseClient) {
     return;
@@ -1078,7 +1215,10 @@ async function loadFeed() {
     </div>
   `;
 
-  const { data: posts, error: postsError } =
+  const {
+    data: posts,
+    error: postsError
+  } =
     await supabaseClient
       .from("feed_posts")
       .select("*")
@@ -1091,6 +1231,7 @@ async function loadFeed() {
       .limit(20);
 
   if (postsError) {
+
     console.error(
       "Feed loading error:",
       postsError
@@ -1106,13 +1247,22 @@ async function loadFeed() {
   }
 
   if (!posts || posts.length === 0) {
+
     feedList.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">📰</div>
-        <strong>No posts yet</strong>
+
+        <div class="empty-state-icon">
+          📰
+        </div>
+
+        <strong>
+          No posts yet
+        </strong>
+
         <span>
           Be the first to share something with the class.
         </span>
+
       </div>
     `;
 
@@ -1120,189 +1270,252 @@ async function loadFeed() {
   }
 
   const postIds =
-    posts.map((post) => post.id);
+    posts.map(
+      (post) => post.id
+    );
 
-  /*
-    Load reactions for these posts.
-  */
-
-  const { data: reactions, error: reactionsError } =
+  const {
+    data: reactions,
+    error: reactionsError
+  } =
     await supabaseClient
       .from("feed_reactions")
-      .select("post_id, user_id, reaction")
-      .in("post_id", postIds);
+      .select(
+        "post_id, user_id, reaction"
+      )
+      .in(
+        "post_id",
+        postIds
+      );
 
   if (reactionsError) {
+
     console.error(
       "Reaction loading error:",
       reactionsError
     );
-  }
 
-  /*
-    Organize reaction information by post.
-  */
+  }
 
   const reactionMap = {};
 
-  (reactions || []).forEach((reaction) => {
+  (reactions || []).forEach(
+    (reaction) => {
 
-    if (!reactionMap[reaction.post_id]) {
-      reactionMap[reaction.post_id] = {
-        count: 0,
-        reactedByUser: false
-      };
-    }
+      if (!reactionMap[reaction.post_id]) {
 
-    reactionMap[reaction.post_id].count += 1;
-
-    if (
-      reaction.user_id === state.user?.id
-    ) {
-      reactionMap[reaction.post_id]
-        .reactedByUser = true;
-    }
-
-  });
-
-  feedList.innerHTML = posts
-    .map((post) => {
-
-      const isOwnPost =
-        post.user_id === state.user?.id;
-
-      const name =
-        isOwnPost
-          ? getDisplayName()
-          : "Student";
-
-      const initials =
-        getInitials(name);
-
-      const reactionInfo =
-        reactionMap[post.id] || {
+        reactionMap[reaction.post_id] = {
           count: 0,
           reactedByUser: false
         };
 
-      const reactionButtonText =
-        reactionInfo.reactedByUser
-          ? "❤️ Reacted"
-          : "❤️ React";
+      }
 
-      const reactionCount =
-        reactionInfo.count > 0
-          ? `
-            <span class="reaction-count">
-              ${reactionInfo.count}
-            </span>
-          `
-          : "";
+      reactionMap[
+        reaction.post_id
+      ].count += 1;
 
-      const pinnedBadge =
-        post.pinned
-          ? `
-            <span class="post-badge">
-              📌 Pinned
-            </span>
-          `
-          : "";
+      if (
+        reaction.user_id ===
+        state.user?.id
+      ) {
 
-      const editedBadge =
-        post.updated_at &&
-        post.updated_at !== post.created_at
-          ? `
-            <span class="post-edited">
-              · edited
-            </span>
-          `
-          : "";
+        reactionMap[
+          reaction.post_id
+        ].reactedByUser = true;
 
-      const ownActions =
-        isOwnPost
-          ? `
-            <button
-              class="post-action"
-              type="button"
-              data-edit-post="${escapeHtml(post.id)}"
-            >
-              ✏️ Edit
-            </button>
+      }
 
-            <button
-              class="post-action danger"
-              type="button"
-              data-delete-post="${escapeHtml(post.id)}"
-            >
-              🗑️ Delete
-            </button>
-          `
-          : "";
+    }
+  );
 
-      return `
-        <article
-          class="feed-post"
-          data-post-id="${escapeHtml(post.id)}"
-        >
+  feedList.innerHTML =
+    posts
+      .map((post) => {
 
-          <div class="post-header">
+        const isOwnPost =
+          post.user_id ===
+          state.user?.id;
 
-            <div class="avatar">
-              ${escapeHtml(initials)}
-            </div>
+        const name =
+          isOwnPost
+            ? getDisplayName()
+            : "Student";
 
-            <div class="post-author-area">
+        const initials =
+          getInitials(name);
 
-              <div class="post-user">
-                ${escapeHtml(name)}
+        const reactionInfo =
+          reactionMap[post.id] || {
+            count: 0,
+            reactedByUser: false
+          };
+
+        const pinnedBadge =
+          post.pinned
+            ? `
+              <span class="post-badge">
+                📌 Pinned
+              </span>
+            `
+            : "";
+
+        const editedBadge =
+          post.updated_at &&
+          post.updated_at !==
+            post.created_at
+            ? `
+              <span class="post-edited">
+                · edited
+              </span>
+            `
+            : "";
+
+        const ownActions =
+          isOwnPost
+            ? `
+              <button
+                class="post-action"
+                type="button"
+                data-edit-post="${escapeHtml(
+                  post.id
+                )}"
+              >
+                ✏️ Edit
+              </button>
+
+              <button
+                class="post-action danger"
+                type="button"
+                data-delete-post="${escapeHtml(
+                  post.id
+                )}"
+              >
+                🗑️ Delete
+              </button>
+            `
+            : "";
+
+        return `
+          <article
+            class="feed-post"
+            data-post-id="${escapeHtml(
+              post.id
+            )}"
+          >
+
+            <div class="post-header">
+
+              <div class="avatar">
+                ${escapeHtml(initials)}
               </div>
 
-              <div class="post-time">
-                ${formatDate(post.created_at)}
-                ${editedBadge}
+              <div class="post-author-area">
+
+                <div class="post-user">
+                  ${escapeHtml(name)}
+                </div>
+
+                <div class="post-time">
+                  ${formatDate(
+                    post.created_at
+                  )}
+                  ${editedBadge}
+                </div>
+
               </div>
+
+              ${pinnedBadge}
 
             </div>
 
-            ${pinnedBadge}
+            <div class="post-content">
+              ${escapeHtml(
+                post.content
+              )}
+            </div>
 
-          </div>
+            <div class="post-actions">
 
-          <div class="post-content">
-            ${escapeHtml(post.content)}
-          </div>
+              <button
+                class="post-action ${
+                  reactionInfo.reactedByUser
+                    ? "active"
+                    : ""
+                }"
+                type="button"
+                data-react-post="${escapeHtml(
+                  post.id
+                )}"
+                data-reaction-count="${reactionInfo.count}"
+              >
 
-          <div class="post-actions">
+                <span class="reaction-heart">
+                  ❤️
+                </span>
 
-            <button
-              class="post-action ${
-                reactionInfo.reactedByUser
-                  ? "active"
-                  : ""
-              }"
-              type="button"
-              data-react-post="${escapeHtml(post.id)}"
-            >
-              ${reactionButtonText}
-              ${reactionCount}
-            </button>
+                <span class="reaction-label">
+                  ${
+                    reactionInfo.reactedByUser
+                      ? "Reacted"
+                      : "React"
+                  }
+                </span>
 
-            <button
-  class="post-action ${
-    reactionInfo.reactedByUser
-      ? "active"
-      : ""
-  }"
-  type="button"
-  data-react-post="${escapeHtml(post.id)}"
-  data-reaction-count="${reactionInfo.count}"
->
+                ${
+                  reactionInfo.count > 0
+                    ? `
+                      <span class="reaction-count">
+                        ${reactionInfo.count}
+                      </span>
+                    `
+                    : ""
+                }
+
+              </button>
+
+              ${ownActions}
+
+            </div>
+
+          </article>
+        `;
+
+      })
+      .join("");
+
+  /*
+    Attach reaction listeners after
+    the feed has been rendered.
+  */
+
+  document
+    .querySelectorAll(
+      "[data-react-post]"
+    )
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          togglePostReaction(
+            button.dataset.reactPost
+          );
+
+        }
+      );
+
+    });
+}
 
 /* =========================================================
-   POST REACTIONS
+   FEED — REACTION
    ========================================================= */
 
-async function togglePostReaction(postId) {
+async function togglePostReaction(
+  postId
+) {
 
   if (
     !supabaseClient ||
@@ -1321,51 +1534,51 @@ async function togglePostReaction(postId) {
     return;
   }
 
-  /*
-    Prevent double-tapping while processing.
-  */
-
-  if (button.dataset.loading === "true") {
+  if (
+    button.dataset.loading ===
+    "true"
+  ) {
     return;
   }
 
   button.dataset.loading = "true";
 
   const wasReacted =
-    button.classList.contains("active");
+    button.classList.contains(
+      "active"
+    );
 
-  /*
-    Animate the button immediately.
-  */
-
-  if (!wasReacted) {
-    button.classList.add("reaction-pop");
-  }
-
-  const { data: existingReaction, error: findError } =
+  const {
+    data: existingReaction,
+    error: findError
+  } =
     await supabaseClient
       .from("feed_reactions")
       .select("id")
       .eq("post_id", postId)
-      .eq("user_id", state.user.id)
-      .eq("reaction", "heart")
+      .eq(
+        "user_id",
+        state.user.id
+      )
+      .eq(
+        "reaction",
+        "heart"
+      )
       .maybeSingle();
 
   if (findError) {
+
     console.error(
       "Reaction lookup error:",
       findError
     );
 
     button.dataset.loading = "false";
+
     return;
   }
 
   let success = false;
-
-  /*
-    Remove reaction.
-  */
 
   if (existingReaction) {
 
@@ -1373,24 +1586,25 @@ async function togglePostReaction(postId) {
       await supabaseClient
         .from("feed_reactions")
         .delete()
-        .eq("id", existingReaction.id);
+        .eq(
+          "id",
+          existingReaction.id
+        );
 
     if (error) {
+
       console.error(
         "Reaction removal error:",
         error
       );
+
     } else {
+
       success = true;
+
     }
 
-  }
-
-  /*
-    Add reaction.
-  */
-
-  else {
+  } else {
 
     const { error } =
       await supabaseClient
@@ -1402,35 +1616,39 @@ async function togglePostReaction(postId) {
         });
 
     if (error) {
+
       console.error(
         "Reaction creation error:",
         error
       );
+
     } else {
+
       success = true;
+
     }
 
   }
 
   if (!success) {
+
     button.dataset.loading = "false";
-    button.classList.remove("reaction-pop");
+
     return;
   }
 
-  /*
-    Update the button without
-    rebuilding the entire feed.
-  */
-
   const currentCount =
     Number(
-      button.dataset.reactionCount || 0
+      button.dataset.reactionCount ||
+      0
     );
 
   const newCount =
     existingReaction
-      ? Math.max(0, currentCount - 1)
+      ? Math.max(
+          0,
+          currentCount - 1
+        )
       : currentCount + 1;
 
   button.dataset.reactionCount =
@@ -1466,7 +1684,27 @@ async function togglePostReaction(postId) {
   `;
 
   /*
-    Animate the number change.
+    Smooth heart animation.
+  */
+
+  if (!wasReacted) {
+
+    button.classList.add(
+      "reaction-pop"
+    );
+
+    setTimeout(() => {
+
+      button.classList.remove(
+        "reaction-pop"
+      );
+
+    }, 300);
+
+  }
+
+  /*
+    Smooth number animation.
   */
 
   const count =
@@ -1475,22 +1713,18 @@ async function togglePostReaction(postId) {
     );
 
   if (count) {
+
+    count.classList.remove(
+      "reaction-count-pop"
+    );
+
+    void count.offsetWidth;
+
     count.classList.add(
       "reaction-count-pop"
     );
 
-    setTimeout(() => {
-      count.classList.remove(
-        "reaction-count-pop"
-      );
-    }, 250);
   }
-
-  setTimeout(() => {
-    button.classList.remove(
-      "reaction-pop"
-    );
-  }, 300);
 
   button.dataset.loading = "false";
 }
@@ -1500,12 +1734,17 @@ async function togglePostReaction(postId) {
    ========================================================= */
 
 async function createPost() {
+
   const textarea =
     document.getElementById(
       "post-content"
     );
 
-  if (!textarea || !supabaseClient) {
+  if (
+    !textarea ||
+    !supabaseClient ||
+    !state.user
+  ) {
     return;
   }
 
@@ -1521,8 +1760,12 @@ async function createPost() {
       "create-post-button"
     );
 
-  button.disabled = true;
-  button.textContent = "Posting...";
+  if (button) {
+
+    button.disabled = true;
+    button.textContent = "Posting...";
+
+  }
 
   const { error } =
     await supabaseClient
@@ -1533,10 +1776,18 @@ async function createPost() {
       });
 
   if (error) {
-    console.error(error);
 
-    button.disabled = false;
-    button.textContent = "Post";
+    console.error(
+      "Post creation error:",
+      error
+    );
+
+    if (button) {
+
+      button.disabled = false;
+      button.textContent = "Post";
+
+    }
 
     alert(
       "Unable to create the post."
@@ -1547,8 +1798,12 @@ async function createPost() {
 
   textarea.value = "";
 
-  button.disabled = false;
-  button.textContent = "Post";
+  if (button) {
+
+    button.disabled = false;
+    button.textContent = "Post";
+
+  }
 
   await loadFeed();
 }
@@ -1558,12 +1813,16 @@ async function createPost() {
    ========================================================= */
 
 async function loadActiveUsers() {
+
   const list =
     document.getElementById(
       "active-user-list"
     );
 
-  if (!list || !supabaseClient) {
+  if (
+    !list ||
+    !supabaseClient
+  ) {
     return;
   }
 
@@ -1573,13 +1832,21 @@ async function loadActiveUsers() {
     </div>
   `;
 
-  const { data: presenceData, error: presenceError } =
+  const {
+    data: presenceData,
+    error: presenceError
+  } =
     await supabaseClient
       .from("user_presence")
-      .select("user_id, status, last_seen_at")
-      .order("status");
+      .select(
+        "user_id, status, last_seen_at"
+      )
+      .order(
+        "status"
+      );
 
   if (presenceError) {
+
     console.error(
       "Presence loading error:",
       presenceError
@@ -1598,11 +1865,22 @@ async function loadActiveUsers() {
     !presenceData ||
     presenceData.length === 0
   ) {
+
     list.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">🟢</div>
-        <strong>No one is showing as active yet.</strong>
-        <span>Your status will appear here when presence is enabled.</span>
+
+        <div class="empty-state-icon">
+          🟢
+        </div>
+
+        <strong>
+          No one is showing as active yet.
+        </strong>
+
+        <span>
+          Your status will appear here when presence is enabled.
+        </span>
+
       </div>
     `;
 
@@ -1614,93 +1892,120 @@ async function loadActiveUsers() {
       (user) => user.user_id
     );
 
-  const { data: profilesData, error: profilesError } =
+  const {
+    data: profilesData,
+    error: profilesError
+  } =
     await supabaseClient
       .from("profiles")
-      .select("id, display_name")
-      .in("id", userIds);
+      .select(
+        "id, display_name"
+      )
+      .in(
+        "id",
+        userIds
+      );
 
   if (profilesError) {
+
     console.error(
       "Profile loading error:",
       profilesError
     );
+
   }
 
   const profileMap = {};
 
   (profilesData || []).forEach(
     (profile) => {
-      profileMap[profile.id] =
+
+      profileMap[
+        profile.id
+      ] =
         profile.display_name ||
         "Student";
+
     }
   );
 
-  list.innerHTML = presenceData
-    .map((user) => {
+  list.innerHTML =
+    presenceData
+      .map((user) => {
 
-      const name =
-        user.user_id === state.user?.id
-          ? getDisplayName()
-          : (
-              profileMap[user.user_id] ||
-              "Student"
-            );
+        const name =
+          user.user_id ===
+          state.user?.id
+            ? getDisplayName()
+            : (
+                profileMap[
+                  user.user_id
+                ] ||
+                "Student"
+              );
 
-      const status =
-        user.status || "offline";
+        const status =
+          user.status ||
+          "offline";
 
-      const statusText =
-        status.charAt(0).toUpperCase() +
-        status.slice(1);
+        const statusText =
+          status
+            .charAt(0)
+            .toUpperCase() +
+          status.slice(1);
 
-      return `
-        <div
-          class="active-user"
-          data-user-id="${escapeHtml(
-            user.user_id
-          )}"
-        >
-
-          <div class="avatar">
-            ${escapeHtml(
-              getInitials(name)
-            )}
-          </div>
-
-          <span
-            class="status-dot ${escapeHtml(
-              status
+        return `
+          <div
+            class="active-user"
+            data-user-id="${escapeHtml(
+              user.user_id
             )}"
-            aria-label="${escapeHtml(
-              statusText
-            )}"
-          ></span>
+          >
 
-          <div class="active-user-info">
-
-            <div class="active-user-name">
-              ${escapeHtml(name)}
+            <div class="avatar">
+              ${escapeHtml(
+                getInitials(name)
+              )}
             </div>
 
-            <div class="active-user-status">
-              ${escapeHtml(statusText)}
+            <span
+              class="status-dot ${escapeHtml(
+                status
+              )}"
+              aria-label="${escapeHtml(
+                statusText
+              )}"
+            ></span>
+
+            <div class="active-user-info">
+
+              <div class="active-user-name">
+                ${escapeHtml(name)}
+              </div>
+
+              <div class="active-user-status">
+                ${escapeHtml(
+                  statusText
+                )}
+              </div>
+
             </div>
 
           </div>
+        `;
 
-        </div>
-      `;
-    })
-    .join("");
+      })
+      .join("");
 }
 
 /* =========================================================
    PRESENCE
    ========================================================= */
 
-async function updatePresence(status = "online") {
+async function updatePresence(
+  status = "online"
+) {
+
   if (
     !supabaseClient ||
     !state.user
@@ -1719,63 +2024,128 @@ async function updatePresence(status = "online") {
       });
 
   if (error) {
+
     console.warn(
       "Presence update failed:",
       error.message
     );
+
   }
 }
 
 /* =========================================================
-   ACADEMIC DATA
+   ACADEMIC SUMMARY
    ========================================================= */
 
 async function loadAcademicSummary() {
-  if (!supabaseClient || !state.user) {
+
+  if (
+    !supabaseClient ||
+    !state.user
+  ) {
     return;
   }
 
-  const { data, error } =
+  const {
+    data,
+    error
+  } =
     await supabaseClient
-      .from("student_academic_summary")
+      .from(
+        "student_academic_summary"
+      )
       .select("*")
-      .eq("user_id", state.user.id)
+      .eq(
+        "user_id",
+        state.user.id
+      )
       .maybeSingle();
 
   if (error) {
+
     console.warn(
       "Academic summary unavailable:",
       error.message
     );
 
-    setText("status-progress", "—");
-    setText("status-average", "—");
-    setText("status-gpa", "—");
-    setText("status-grade", "—");
-    setText("status-consistency", "—");
-    setText("status-tests", "0");
+    setText(
+      "status-progress",
+      "—"
+    );
+
+    setText(
+      "status-average",
+      "—"
+    );
+
+    setText(
+      "status-gpa",
+      "—"
+    );
+
+    setText(
+      "status-grade",
+      "—"
+    );
+
+    setText(
+      "status-consistency",
+      "—"
+    );
+
+    setText(
+      "status-tests",
+      "0"
+    );
 
     return;
   }
 
   if (!data) {
-    setText("status-progress", "No data");
-    setText("status-average", "—");
-    setText("status-gpa", "—");
-    setText("status-grade", "—");
-    setText("status-consistency", "—");
-    setText("status-tests", "0");
+
+    setText(
+      "status-progress",
+      "No data"
+    );
+
+    setText(
+      "status-average",
+      "—"
+    );
+
+    setText(
+      "status-gpa",
+      "—"
+    );
+
+    setText(
+      "status-grade",
+      "—"
+    );
+
+    setText(
+      "status-consistency",
+      "—"
+    );
+
+    setText(
+      "status-tests",
+      "0"
+    );
 
     return;
   }
 
-  const average = data.overall_average;
+  const average =
+    data.overall_average;
 
   const progress =
     data.total_tests
       ? Math.min(
           100,
-          Number(data.total_tests) * 10
+          Number(
+            data.total_tests
+          ) * 10
         )
       : 0;
 
@@ -1787,32 +2157,41 @@ async function loadAcademicSummary() {
   setText(
     "status-average",
     average !== null
-      ? `${Number(average).toFixed(1)}%`
+      ? `${Number(
+          average
+        ).toFixed(1)}%`
       : "—"
   );
 
   setText(
     "status-gpa",
     data.gpa !== null
-      ? Number(data.gpa).toFixed(2)
+      ? Number(
+          data.gpa
+        ).toFixed(2)
       : "—"
   );
 
   setText(
     "status-grade",
-    data.overall_letter_grade || "—"
+    data.overall_letter_grade ||
+      "—"
   );
 
   setText(
     "status-consistency",
-    data.score_consistency !== null
-      ? Number(data.score_consistency).toFixed(1)
+    data.score_consistency !==
+      null
+      ? Number(
+          data.score_consistency
+        ).toFixed(1)
       : "—"
   );
 
   setText(
     "status-tests",
-    data.total_tests ?? "0"
+    data.total_tests ??
+      "0"
   );
 }
 
@@ -1821,6 +2200,7 @@ async function loadAcademicSummary() {
    ========================================================= */
 
 async function loadLatestScore() {
+
   if (
     !supabaseClient ||
     !state.user
@@ -1828,14 +2208,25 @@ async function loadLatestScore() {
     return;
   }
 
-  const { data, error } =
+  const {
+    data,
+    error
+  } =
     await supabaseClient
-      .from("student_score_details")
+      .from(
+        "student_score_details"
+      )
       .select("*")
-      .eq("user_id", state.user.id)
-      .order("test_date", {
-        ascending: false
-      })
+      .eq(
+        "user_id",
+        state.user.id
+      )
+      .order(
+        "test_date",
+        {
+          ascending: false
+        }
+      )
       .limit(1)
       .maybeSingle();
 
@@ -1846,16 +2237,20 @@ async function loadLatestScore() {
   setText(
     "status-latest",
     data.score !== null
-      ? `${Number(data.score).toFixed(0)}%`
+      ? `${Number(
+          data.score
+        ).toFixed(0)}%`
       : "—"
   );
 
   setText(
     "status-chapter",
     data.title ||
-      (data.chapter_number
-        ? `Chapter ${data.chapter_number}`
-        : "—")
+      (
+        data.chapter_number
+          ? `Chapter ${data.chapter_number}`
+          : "—"
+      )
   );
 }
 
@@ -1864,58 +2259,35 @@ async function loadLatestScore() {
    ========================================================= */
 
 async function loadHomepageData() {
+
+  /*
+    Update presence first so the current
+    user can appear in Who's Active.
+  */
+
+  await updatePresence("online");
+
   await Promise.all([
     loadAcademicSummary(),
     loadLatestScore(),
     loadFeed(),
-    loadActiveUsers(),
-    updatePresence("online")
+    loadActiveUsers()
   ]);
 }
 
 /* =========================================================
-   TEXT HELPER
-   ========================================================= */
-
-function setText(id, value) {
-  const element =
-    document.getElementById(id);
-
-  if (element) {
-    element.textContent = value;
-  }
-}
-
-/* =========================================================
-   DATE FORMAT
-   ========================================================= */
-
-function formatDate(value) {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
-
-  return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-}
-
-/* =========================================================
-   AUTH STATE
+   INITIALIZE APP
    ========================================================= */
 
 async function initializeApp() {
+
   showLoading();
 
   const configured =
     initializeSupabase();
 
   if (!configured) {
+
     renderLoginPage(
       "Supabase connection needs to be configured in app.js."
     );
@@ -1931,10 +2303,15 @@ async function initializeApp() {
     await supabaseClient.auth.getSession();
 
   state.session = session;
-  state.user = session?.user || null;
+  state.user =
+    session?.user || null;
 
   if (!state.user) {
+
     renderLoginPage();
+
+    setupAuthListener();
+
     return;
   }
 
@@ -1944,15 +2321,32 @@ async function initializeApp() {
 
   await loadHomepageData();
 
+  setupAuthListener();
+}
+
+/* =========================================================
+   AUTH LISTENER
+   ========================================================= */
+
+function setupAuthListener() {
+
+  if (!supabaseClient) {
+    return;
+  }
+
   supabaseClient.auth.onAuthStateChange(
     async (_event, session) => {
 
       state.session = session;
-      state.user = session?.user || null;
+      state.user =
+        session?.user || null;
 
       if (!state.user) {
+
         state.profile = null;
+
         renderLoginPage();
+
         return;
       }
 
@@ -1961,6 +2355,7 @@ async function initializeApp() {
       renderApp();
 
       await loadHomepageData();
+
     }
   );
 }
@@ -1972,83 +2367,4 @@ async function initializeApp() {
 document.addEventListener(
   "DOMContentLoaded",
   initializeApp
-)
-
-
-/* =========================================================
-   SMOOTH REACTION ANIMATIONS
-   ========================================================= */
-
-.post-action[data-react-post] {
-  transition:
-    transform 0.18s ease,
-    background-color 0.18s ease,
-    color 0.18s ease;
-}
-
-.post-action[data-react-post]:active {
-  transform: scale(0.94);
-}
-
-.post-action[data-react-post].active {
-  transform: scale(1.02);
-}
-
-.reaction-heart {
-  display: inline-block;
-  transition:
-    transform 0.2s ease;
-}
-
-.reaction-pop .reaction-heart {
-  animation: reactionHeartPop 0.3s ease;
-}
-
-.reaction-count {
-  display: inline-block;
-  min-width: 1.2em;
-  margin-left: 3px;
-  text-align: center;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
-.reaction-count-pop {
-  animation: reactionCountPop 0.25s ease;
-}
-
-@keyframes reactionHeartPop {
-
-  0% {
-    transform: scale(1);
-  }
-
-  45% {
-    transform: scale(1.35);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-
-}
-
-@keyframes reactionCountPop {
-
-  0% {
-    opacity: 0.4;
-    transform: scale(0.75);
-  }
-
-  60% {
-    opacity: 1;
-    transform: scale(1.2);
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-}
+);
