@@ -95,6 +95,7 @@ using (
     type = 'group'
     and name = 'The Care Team'
   )
+  or conversations.created_by = auth.uid()
   or exists (
     select 1 from public.conversation_members cm
     where cm.conversation_id = conversations.id
