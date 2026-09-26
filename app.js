@@ -1796,6 +1796,8 @@ function renderTopbar() {
 
       <div class="topbar-actions">
 
+        <button class="topbar-search-button" id="topbar-search-button" title="Search StudentHub" aria-label="Search StudentHub" type="button">🔎 <span>Search</span></button>
+
         <button
           class="topbar-icon-button"
           id="messages-button"
@@ -2040,6 +2042,8 @@ function attachShellEvents() {
       "click",
       () => navigate("messages")
     );
+
+  $("#topbar-search-button")?.addEventListener("click", () => navigate("search"));
 
   document
     .querySelectorAll(
