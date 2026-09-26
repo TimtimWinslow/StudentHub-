@@ -5644,25 +5644,16 @@ function renderChapterTracker() {
                 Select a class
               </option>
 
-              ${state.classes
-                .map(
-                  (classItem) => `
+              ${state.classes.length
+                ? state.classes.map((classItem) => `
                     <option
-                      value="${escapeHtml(
-                        classItem.id
-                      )}"
-                      ${
-                        classItem.id ===
-                        state.currentClassId
-                          ? "selected"
-                          : ""
-                      }
+                      value="${escapeHtml(classItem.id)}"
+                      ${String(classItem.id) === String(state.currentClassId) ? "selected" : ""}
                     >
-                      ${getClassLabel(classItem)}
+                      ${escapeHtml(getClassLabel(classItem))}
                     </option>
-                  `
-                )
-                .join("")}
+                  `).join("")
+                : `<option value="cna" selected>CNA</option>`}
 
             </select>
 
