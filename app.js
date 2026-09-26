@@ -2881,6 +2881,43 @@ async function loadPinnedMessages() {
   return state.pinnedMessages;
 }
 
+async function loadMessageReactions() {
+  if (!supabaseClient) return [];
+
+  const { data, error } = await supabaseClient
+    .from("message_reactions")
+    .select("*");
+
+  if (error) {
+    state.messageReactions = [];
+    return [];
+  }
+
+  state.messageReactions = data || [];
+  return state.messageReactions;
+}
+
+function getMessageReactionCount(messageId, reaction = "❤️") {
+  return state.messageReactions.filter(
+    item => item.message_id === messageId && item.reaction === reaction
+  ).length;
+}
+
+function hasMyMessageReaction(messageId, reaction = "❤️") {
+  return state.messageReactions.some(
+    item =>
+      item.message_id === messageId &&
+      item.user_id === state.user?.id &&
+      item.reaction === reaction
+  );
+}
+
+function isMessagePinned(messageId) {
+  return state.pinnedMessages.some(
+    item => item.message_id === messageId
+  );
+}
+
 function renderCareTeam() {
   return `
     <section class="page">
@@ -3043,39 +3080,40 @@ function renderCareMessage(message) {
             message.message ||
             ""
           )}
+          ${message.edited_at ? '<span class="message-edited">(edited)</span>' : ""}
         </div>
 
-        ${
-          mine
-            ? `
-              <div class="care-message-actions">
+        <div class="care-message-actions">
+          <button
+            data-react-message="${escapeHtml(message.id)}"
+            class="${hasMyMessageReaction(message.id) ? "active" : ""}"
+            title="React with heart"
+          >
+            ❤️ ${getMessageReactionCount(message.id)}
+          </button>
 
+          <button
+            data-pin-message="${escapeHtml(message.id)}"
+            class="${isMessagePinned(message.id) ? "active" : ""}"
+          >
+            ${isMessagePinned(message.id) ? "📌 Pinned" : "📌 Pin"}
+          </button>
+
+          ${
+            mine
+              ? `
                 ${
                   editable
                     ? `
-                      <button
-                        data-edit-message="${escapeHtml(
-                          message.id
-                        )}"
-                      >
-                        Edit
-                      </button>
+                      <button data-edit-message="${escapeHtml(message.id)}">Edit</button>
                     `
                     : ""
                 }
-
-                <button
-                  data-delete-message="${escapeHtml(
-                    message.id
-                  )}"
-                >
-                  Delete
-                </button>
-
-              </div>
-            `
-            : ""
-        }
+                <button data-delete-message="${escapeHtml(message.id)}">Delete</button>
+              `
+              : ""
+          }
+        </div>
 
       </div>
 
@@ -3086,7 +3124,8 @@ function renderCareMessage(message) {
 async function hydrateCareTeam() {
   await Promise.all([
     loadCareMessages(),
-    loadPinnedMessages()
+    loadPinnedMessages(),
+    loadMessageReactions()
   ]);
 
   const container =
@@ -3132,6 +3171,18 @@ async function hydrateCareTeam() {
           )
       );
     });
+
+  document.querySelectorAll("[data-react-message]").forEach((button) => {
+    button.addEventListener("click", () =>
+      toggleMessageReaction(button.dataset.reactMessage)
+    );
+  });
+
+  document.querySelectorAll("[data-pin-message]").forEach((button) => {
+    button.addEventListener("click", () =>
+      togglePinnedMessage(button.dataset.pinMessage)
+    );
+  });
 }
 
 async function handleCareMessageSubmit(
@@ -3251,8 +3302,9 @@ async function editCareMessage(
   } = await supabaseClient
     .from("messages")
     .update({
-      content:
-        updated.trim()
+      content: updated.trim(),
+      edited_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
     .eq("id", messageId)
     .eq(
@@ -3268,6 +3320,83 @@ async function editCareMessage(
     );
 
     return;
+  }
+
+  await hydrateCareTeam();
+}
+
+async function toggleMessageReaction(messageId) {
+  if (!supabaseClient || !state.user) return;
+
+  const existing = state.messageReactions.find(
+    item =>
+      item.message_id === messageId &&
+      item.user_id === state.user.id &&
+      item.reaction === "❤️"
+  );
+
+  if (existing) {
+    const { error } = await supabaseClient
+      .from("message_reactions")
+      .delete()
+      .eq("id", existing.id)
+      .eq("user_id", state.user.id);
+
+    if (error) {
+      showMessage(error.message || "Unable to remove reaction.", "error");
+      return;
+    }
+  } else {
+    const { error } = await supabaseClient
+      .from("message_reactions")
+      .insert({
+        message_id: messageId,
+        user_id: state.user.id,
+        reaction: "❤️"
+      });
+
+    if (error) {
+      showMessage(error.message || "Unable to add reaction.", "error");
+      return;
+    }
+  }
+
+  await hydrateCareTeam();
+}
+
+async function togglePinnedMessage(messageId) {
+  if (!supabaseClient || !state.user) return;
+
+  const existing = state.pinnedMessages.find(
+    item => item.message_id === messageId
+  );
+
+  if (existing) {
+    const { error } = await supabaseClient
+      .from("pinned_messages")
+      .delete()
+      .eq("id", existing.id);
+
+    if (error) {
+      showMessage(error.message || "Unable to unpin message.", "error");
+      return;
+    }
+
+    showMessage("Message unpinned.");
+  } else {
+    const { error } = await supabaseClient
+      .from("pinned_messages")
+      .insert({
+        message_id: messageId,
+        pinned_by: state.user.id
+      });
+
+    if (error) {
+      showMessage(error.message || "Unable to pin message.", "error");
+      return;
+    }
+
+    showMessage("Message pinned.");
   }
 
   await hydrateCareTeam();
