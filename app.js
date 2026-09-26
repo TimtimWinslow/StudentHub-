@@ -481,7 +481,7 @@ function renderLogin() {
       <div class="auth-card">
 
         <div class="auth-logo">
-          <div class="auth-logo-mark">S</div>
+          <div class="auth-logo-mark"><img src="assets/studenthub-mark.svg" alt="StudentHub logo" /></div>
 
           <div>
             <h1>StudentHub</h1>
@@ -579,7 +579,7 @@ function renderSignUp() {
     <div class="auth-page">
       <div class="auth-card">
         <div class="auth-logo">
-          <div class="auth-logo-mark">S</div>
+          <div class="auth-logo-mark"><img src="assets/studenthub-mark.svg" alt="StudentHub logo" /></div>
           <div>
             <h1>StudentHub</h1>
             <p>Your CNA class. Your progress. Your community.</p>
@@ -695,7 +695,7 @@ function renderResetPassword() {
     <div class="auth-page">
       <div class="auth-card">
         <div class="auth-logo">
-          <div class="auth-logo-mark">S</div>
+          <div class="auth-logo-mark"><img src="assets/studenthub-mark.svg" alt="StudentHub logo" /></div>
           <div>
             <h1>StudentHub</h1>
             <p>Your CNA class. Your progress. Your community.</p>
@@ -1622,7 +1622,7 @@ function renderSidebar() {
     <aside class="sidebar" id="sidebar">
 
       <div class="sidebar-brand">
-        <div class="brand-mark">S</div>
+        <div class="brand-mark"><img src="assets/studenthub-mark.svg" alt="StudentHub logo" /></div>
 
         <div class="brand-text">
           <strong>StudentHub</strong>
