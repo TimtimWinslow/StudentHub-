@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 260" role="img" aria-labelledby="title desc">
+  <title id="title">StudentHub</title>
+  <desc id="desc">StudentHub logo with a blue graduation cap, stylized S, and student group.</desc>
+  <defs>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12D7E8"/>
+      <stop offset="0.55" stop-color="#00A6E8"/>
+      <stop offset="1" stop-color="#1976D2"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(20 20)">
+    <path fill="url(#blue)" d="M110 22 215 65 110 108 5 65Z"/>
+    <path fill="url(#blue)" d="M54 83v34c31 25 81 25 112 0V83L110 106Z"/>
+    <path fill="url(#blue)" d="M195 68v70h10V64Z"/>
+    <circle cx="210" cy="143" r="9" fill="#fff"/>
+    <path fill="url(#blue)" d="M40 111c-2 28 17 52 43 62 29 11 65 6 88-13 18-15 27-36 24-61-19 22-49 35-84 35-30 0-55-9-71-23Z"/>
+    <path fill="#071A2B" d="M75 92c19 18 54 22 82 8 13-7 25-17 34-31 1 7 2 14 0 21-7 29-35 49-69 50-31 1-59-12-72-31-5-7-8-14-9-22 10 4 20 6 34 5Z"/>
+    <circle cx="92" cy="141" r="12" fill="#fff"/>
+    <circle cx="121" cy="137" r="14" fill="#fff"/>
+    <circle cx="151" cy="141" r="12" fill="#fff"/>
+    <path fill="#fff" d="M70 168c0-17 11-25 22-25s22 8 22 25v10H70Z"/>
+    <path fill="#fff" d="M101 172c0-20 14-29 27-29s27 9 27 29v8h-54Z"/>
+    <path fill="#fff" d="M135 168c0-17 11-25 22-25s22 8 22 25v10h-44Z"/>
+  </g>
+  <text x="265" y="142" fill="#F5F9FC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="92" font-weight="800">Student</text>
+  <text x="645" y="142" fill="url(#blue)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="92" font-weight="800">Hub</text>
+  <text x="270" y="193" fill="#A8BDCC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="5">YOUR CLASS. YOUR PROGRESS. YOUR COMMUNITY.</text>
+</svg>
