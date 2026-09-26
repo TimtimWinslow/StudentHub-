@@ -356,6 +356,69 @@ async function signIn(email, password) {
   return data;
 }
 
+async function resendConfirmationEmail(email) {
+  if (!supabaseClient) {
+    throw new Error("Supabase is not initialized.");
+  }
+
+  const cleanEmail = String(email || "").trim();
+
+  if (!cleanEmail) {
+    throw new Error("Enter your email address first.");
+  }
+
+  const { error } = await supabaseClient.auth.resend({
+    type: "signup",
+    email: cleanEmail,
+    options: {
+      emailRedirectTo: window.location.origin
+    }
+  });
+
+  if (error) throw error;
+}
+
+async function handleResendConfirmation() {
+  const email = $("#login-email")?.value.trim();
+  const button = $("#resend-confirmation");
+  const message = $("#login-error");
+
+  if (!email) {
+    if (message) {
+      message.className = "form-error";
+      message.textContent = "Enter your email address first.";
+    }
+    $("#login-email")?.focus();
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Sending...";
+  }
+
+  try {
+    await resendConfirmationEmail(email);
+
+    if (message) {
+      message.className = "form-success";
+      message.textContent = "Confirmation email sent. Check your inbox and spam folder.";
+    }
+  } catch (error) {
+    console.error("Resend confirmation error:", error);
+
+    if (message) {
+      message.className = "form-error";
+      message.textContent = error?.message || "Unable to resend confirmation email.";
+    }
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Resend Confirmation Email";
+    }
+  }
+}
+
 async function signUp(fullName, email, password) {
   if (!supabaseClient) {
     throw new Error("Supabase is not initialized.");
@@ -547,6 +610,14 @@ function renderLogin() {
 
         <button
           class="text-button"
+          id="resend-confirmation"
+          type="button"
+        >
+          Resend Confirmation Email
+        </button>
+
+        <button
+          class="text-button"
           id="create-account"
           type="button"
         >
@@ -570,6 +641,11 @@ function renderLogin() {
   $("#create-account")?.addEventListener(
     "click",
     renderSignUp
+  );
+
+  $("#resend-confirmation")?.addEventListener(
+    "click",
+    handleResendConfirmation
   );
 }
 
