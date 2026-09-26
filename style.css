@@ -3045,3 +3045,112 @@ img {
     gap: 4px;
   }
 }
+
+
+/* =========================================================
+   ASSIGNMENTS
+   ========================================================= */
+
+.assignment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.assignment-stat {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  text-align: center;
+}
+
+.assignment-stat strong {
+  font-size: 1.7rem;
+}
+
+.assignment-stat span {
+  opacity: .7;
+}
+
+.assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: .85rem;
+}
+
+.assignment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(128,128,128,.22);
+  border-radius: 14px;
+}
+
+.assignment-overdue {
+  border-left: 4px solid currentColor;
+}
+
+.assignment-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.assignment-title-row {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  flex-wrap: wrap;
+}
+
+.assignment-title-row h3 {
+  margin: 0;
+}
+
+.assignment-main p {
+  margin: .4rem 0;
+  opacity: .75;
+}
+
+.assignment-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: .85rem;
+  opacity: .75;
+}
+
+.assignment-status {
+  display: inline-flex;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  border: 1px solid rgba(128,128,128,.25);
+}
+
+.assignment-actions {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+
+@media (max-width: 700px) {
+  .assignment-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assignment-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .assignment-actions {
+    width: 100%;
+  }
+
+  .assignment-actions button {
+    flex: 1;
+  }
+}
