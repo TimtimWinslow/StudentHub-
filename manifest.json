@@ -1,0 +1,23 @@
+{
+  "name": "StudentHub",
+  "short_name": "StudentHub",
+  "description": "Your CNA class. Your progress. Your community.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#071A2B",
+  "theme_color": "#071A2B",
+  "icons": [
+    {
+      "src": "assets/studenthub-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/studenthub-favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
