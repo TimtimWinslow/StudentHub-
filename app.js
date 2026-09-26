@@ -5480,6 +5480,65 @@ function renderProgressContent() {
 
       </div>
 
+      <div class="panel progress-chapters-panel">
+
+        <div class="panel-header">
+
+          <div>
+            <span class="panel-icon">📚</span>
+            <h2>Chapter Progress</h2>
+          </div>
+
+        </div>
+
+        ${
+          state.chapters.length
+            ? `
+              <div class="chapter-progress-list">
+                ${state.chapters
+                  .map((chapter) => {
+                    const matchingScore =
+                      state.scoreDetails.find(
+                        (score) =>
+                          String(score.chapter_id) ===
+                          String(chapter.id)
+                      );
+
+                    const completed = Boolean(matchingScore);
+                    const scoreText = completed
+                      ? `${Number(matchingScore.score).toFixed(2)}%`
+                      : "Pending";
+
+                    const letter = completed
+                      ? (matchingScore.letter_grade || calculateLetterGrade(matchingScore.score))
+                      : "";
+
+                    return `
+                      <div class="chapter-progress-row">
+                        <div class="chapter-progress-main">
+                          <strong>Chapter ${escapeHtml(chapter.chapter_number)}</strong>
+                          <span>${escapeHtml(chapter.title || "Chapter")}</span>
+                        </div>
+                        <div class="chapter-progress-result">
+                          ${completed
+                            ? `<strong>${scoreText}</strong><span class="${getLetterClass(letter)}">${escapeHtml(letter)}</span>`
+                            : `<span class="chapter-pending">Pending</span>`}
+                        </div>
+                      </div>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            `
+            : `
+              <div class="empty-state">
+                <p>Chapter list is not available yet.</p>
+              </div>
+            `
+        }
+
+      </div>
+
       <div class="panel progress-history-panel">
 
         <div class="panel-header">
@@ -5584,7 +5643,8 @@ function renderProgressContent() {
 async function hydrateProgress() {
   await Promise.all([
     loadAcademicSummary(),
-    loadScoreDetails()
+    loadScoreDetails(),
+    loadChapters()
   ]);
 
   const container =
