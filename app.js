@@ -52,6 +52,8 @@ const state = {
   classmates: [],
   currentConversationId: null,
   showNewMessage: false,
+  searchQuery: "",
+  searchResults: [],
 
   flashcardDecks: [],
   currentDeck: null,
@@ -1657,6 +1659,12 @@ function renderSidebar() {
         )}
 
         ${navButton(
+          "search",
+          "🔎",
+          "Search"
+        )}
+
+        ${navButton(
           "care-team",
           "💬",
           "The Care Team"
@@ -1935,7 +1943,8 @@ function getPageTitle() {
       "Chapter Tracker",
     progress: "Progress",
     profile: "My Profile",
-    account: "Account"
+    account: "Account",
+    search: "Search"
   };
 
   return (
@@ -2157,6 +2166,8 @@ function renderPageContent() {
 
     case "account":
       return renderAccount();
+    case "search":
+      return renderSearch();
 
     default:
       return renderHome();
@@ -2218,6 +2229,9 @@ async function hydratePage(page) {
 
   if (page === "account") {
     await hydrateAccount();
+  }
+  if (page === "search") {
+    await hydrateSearch();
   }
 }
 
@@ -6746,6 +6760,14 @@ async function saveProfile(event) {
     }
   }
 }
+
+function renderSearch(){return '<section class="page"><div class="page-header"><p class="eyebrow">STUDENTHUB SEARCH</p><h1>Search</h1><p>Find classmates, messages, assignments, calendar events, chapters, and feed posts.</p></div><section class="panel search-panel"><div class="global-search-box"><span>🔎</span><input id="global-search-input" class="text-input" type="search" placeholder="Search StudentHub..."/><button id="global-search-clear" class="secondary-button" type="button">Clear</button></div><div class="search-hint">Search is limited to information your account can access.</div></section><section id="search-results-panel">'+renderSearchResults()+'</section></section>';}
+function renderSearchResults(){if(!state.searchQuery.trim())return '<section class="panel search-empty-state"><h2>Start searching</h2><p>Try a classmate, assignment, chapter, event, or message.</p></section>';if(!state.searchResults.length)return '<section class="panel search-empty-state"><h2>No results found</h2><p>Try a different keyword.</p></section>';return '<div class="search-result-summary"><strong>'+state.searchResults.length+'</strong> result(s)</div><div class="search-results-grid">'+state.searchResults.map(function(x){return '<button class="search-result-item" type="button" data-search-type="'+escapeHtml(x.type)+'" data-search-id="'+escapeHtml(x.id||'')+'"><span class="search-result-icon">'+escapeHtml(x.icon||'🔎')+'</span><span class="search-result-content"><strong>'+escapeHtml(x.title||'Result')+'</strong><small>'+escapeHtml(x.subtitle||'')+'</small><span>'+escapeHtml(x.preview||'')+'</span></span><span>›</span></button>';}).join('')+'</div>';}
+function searchText(){return Array.from(arguments).filter(Boolean).join(' ').toLowerCase();}
+async function loadSearchClassmates(){if(!supabaseClient||!state.user)return [];const r=await supabaseClient.from('profiles').select('id,display_name,full_name,bio').neq('id',state.user.id).limit(100);if(r.error)return [];return r.data||[];}
+async function buildSearchResults(q){q=q.trim().toLowerCase();if(!q)return [];const people=await loadSearchClassmates();const r=[];people.forEach(function(x){if(searchText(x.display_name,x.full_name,x.bio).includes(q))r.push({type:'classmate',id:x.id,title:x.display_name||x.full_name||'Classmate',subtitle:'CNA Classmate',preview:x.bio||'Start a private message.',icon:'👤'});});state.assignments.forEach(function(x){if(searchText(x.title,x.description,x.status).includes(q))r.push({type:'assignment',id:x.id,title:x.title,subtitle:'Due '+formatDate(x.due_date),preview:x.description||'',icon:'📝'});});state.calendarEvents.forEach(function(x){if(searchText(x.title,x.description,x.location,x.event_type).includes(q))r.push({type:'calendar',id:x.id,title:x.title,subtitle:formatDate(x.start_time||x.event_date),preview:x.description||x.location||'',icon:'📅'});});state.chapters.forEach(function(x){if(searchText(x.title,x.name,x.chapter_title,x.description,x.chapter_number).includes(q))r.push({type:'chapter',id:x.id,title:x.title||x.name||('Chapter '+(x.chapter_number||'')),subtitle:'Chapter '+(x.chapter_number||''),preview:x.description||'',icon:'📖'});});state.feedPosts.forEach(function(x){if(searchText(x.title,x.content,x.body,x.message).includes(q))r.push({type:'feed',id:x.id,title:x.title||'Main Feed Post',subtitle:formatDateTime(x.created_at),preview:x.content||x.body||x.message||'',icon:'📰'});});state.careMessages.forEach(function(x){if(searchText(x.content,x.message).includes(q))r.push({type:'message',id:x.id,title:'The Care Team',subtitle:formatDateTime(x.created_at),preview:x.content||x.message||'',icon:'💬'});});return r.slice(0,100);}
+async function hydrateSearch(){const container=$('#page-container');if(!container)return;container.innerHTML=renderSearch();const input=$('#global-search-input');input?.focus();const run=async function(){state.searchQuery=input?.value||'';const p=$('#search-results-panel');if(!p)return;if(!state.searchQuery.trim()){state.searchResults=[];p.innerHTML=renderSearchResults();return;}p.innerHTML='<section class="panel search-loading"><p>Searching StudentHub...</p></section>';state.searchResults=await buildSearchResults(state.searchQuery);p.innerHTML=renderSearchResults();attachSearchResultEvents();};input?.addEventListener('input',run);$('#global-search-clear')?.addEventListener('click',function(){if(input)input.value='';state.searchQuery='';state.searchResults=[];input?.focus();const p=$('#search-results-panel');if(p)p.innerHTML=renderSearchResults();});}
+function attachSearchResultEvents(){document.querySelectorAll('[data-search-type]').forEach(function(b){b.addEventListener('click',async function(){const t=b.dataset.searchType,id=b.dataset.searchId;if(t==='classmate')await startDirectMessage(id);else if(t==='assignment')await navigate('assignments');else if(t==='calendar')await navigate('calendar');else if(t==='feed')await navigate('home');else if(t==='chapter')await navigate('chapter-tracker');else await navigate('care-team');});});}
 
 /* =========================================================
    ACCOUNT & SETTINGS
