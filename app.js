@@ -15,6 +15,13 @@ const SUPABASE_ANON_KEY =
 
 let supabaseClient = null;
 
+let presenceHeartbeat = null;
+let presenceIdleTimer = null;
+let lastPresenceActivity = Date.now();
+
+const PRESENCE_IDLE_MS = 5 * 60 * 1000;
+const PRESENCE_HEARTBEAT_MS = 60 * 1000;
+
 /* =========================================================
    GLOBAL STATE
    ========================================================= */
@@ -6536,6 +6543,8 @@ async function startAuthenticatedApp() {
       "online"
     );
 
+    startPresenceLifecycle();
+
     state.currentPage =
       "home";
 
@@ -6597,28 +6606,56 @@ async function startApp() {
    PRESENCE LIFECYCLE
    ========================================================= */
 
-document.addEventListener(
-  "visibilitychange",
-  () => {
-    if (!state.user)
-      return;
+function markPresenceActivity() {
+  if (!state.user) return;
+  lastPresenceActivity = Date.now();
+  if (!document.hidden) updatePresence("online");
+}
 
+function startPresenceLifecycle() {
+  if (presenceHeartbeat) clearInterval(presenceHeartbeat);
+  if (presenceIdleTimer) clearInterval(presenceIdleTimer);
+
+  lastPresenceActivity = Date.now();
+  updatePresence(document.hidden ? "idle" : "online");
+
+  presenceHeartbeat = setInterval(() => {
+    if (!state.user) return;
+    const inactiveFor = Date.now() - lastPresenceActivity;
     updatePresence(
-      document.hidden
+      document.hidden || inactiveFor >= PRESENCE_IDLE_MS
         ? "idle"
         : "online"
     );
+  }, PRESENCE_HEARTBEAT_MS);
+
+  presenceIdleTimer = setInterval(() => {
+    if (!state.user || document.hidden) return;
+    if (Date.now() - lastPresenceActivity >= PRESENCE_IDLE_MS) {
+      updatePresence("idle");
+    }
+  }, 30 * 1000);
+}
+
+["click", "keydown", "touchstart", "scroll"].forEach((eventName) => {
+  document.addEventListener(eventName, markPresenceActivity, { passive: true });
+});
+
+document.addEventListener(
+  "visibilitychange",
+  () => {
+    if (!state.user) return;
+    lastPresenceActivity = Date.now();
+    updatePresence(document.hidden ? "idle" : "online");
   }
 );
 
 window.addEventListener(
   "beforeunload",
   () => {
-    if (state.user) {
-      updatePresence(
-        "offline"
-      );
-    }
+    if (state.user) updatePresence("offline");
+    if (presenceHeartbeat) clearInterval(presenceHeartbeat);
+    if (presenceIdleTimer) clearInterval(presenceIdleTimer);
   }
 );
 
