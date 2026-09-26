@@ -444,6 +444,10 @@ function resetState() {
   state.careMessages = [];
   state.pinnedMessages = [];
   state.messageReactions = [];
+  state.conversations = [];
+  state.classmates = [];
+  state.currentConversationId = null;
+  state.showNewMessage = false;
 
   state.flashcardDecks = [];
   state.currentDeck = null;
