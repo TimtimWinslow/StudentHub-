@@ -741,15 +741,8 @@ async function handleSignUp(event) {
       return;
     }
 
-    if (message) {
-      message.className = "form-success";
-      message.textContent = "Account created. Check your email to confirm your account, then sign in.";
-    }
+    renderSignupConfirmation(email);
 
-    if (button) {
-      button.disabled = false;
-      button.textContent = "Create Account";
-    }
   } catch (error) {
     console.error(error);
 
@@ -763,6 +756,88 @@ async function handleSignUp(event) {
       button.textContent = "Create Account";
     }
   }
+}
+
+function renderSignupConfirmation(email = "") {
+  const app = $("#app");
+  if (!app) return;
+
+  const safeEmail = escapeHtml(email || "your email address");
+
+  app.innerHTML = `
+    <div class="auth-page">
+      <div class="auth-card auth-confirmation-card">
+        <div class="auth-logo">
+          <div class="auth-logo-mark"><img src="assets/studenthub-mark.svg" alt="StudentHub logo" /></div>
+          <div>
+            <h1>StudentHub</h1>
+            <p>Your CNA class. Your progress. Your community.</p>
+          </div>
+        </div>
+
+        <div class="auth-confirmation-icon" aria-hidden="true">✉️</div>
+
+        <div class="auth-heading">
+          <h2>Check your email</h2>
+          <p>We've sent a confirmation email to <strong>${safeEmail}</strong>.</p>
+        </div>
+
+        <div class="auth-confirmation-copy">
+          <p>Open the email and tap the confirmation link to activate your StudentHub account.</p>
+          <p>Don't see it? Check your spam or junk folder.</p>
+        </div>
+
+        <button
+          class="primary-button auth-submit"
+          id="confirmation-resend"
+          type="button"
+        >
+          Resend Confirmation Email
+        </button>
+
+        <button
+          class="text-button"
+          id="confirmation-back-login"
+          type="button"
+        >
+          Back to Sign In
+        </button>
+
+        <div id="confirmation-message" class="form-error"></div>
+      </div>
+    </div>
+  `;
+
+  $("#confirmation-resend")?.addEventListener("click", async () => {
+    const button = $("#confirmation-resend");
+    const message = $("#confirmation-message");
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Sending...";
+    }
+
+    try {
+      await resendConfirmationEmail(email);
+
+      if (message) {
+        message.className = "form-success";
+        message.textContent = "A new confirmation email has been sent.";
+      }
+    } catch (error) {
+      if (message) {
+        message.className = "form-error";
+        message.textContent = error?.message || "Unable to resend confirmation email.";
+      }
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Resend Confirmation Email";
+      }
+    }
+  });
+
+  $("#confirmation-back-login")?.addEventListener("click", renderLogin);
 }
 
 function renderResetPassword() {
