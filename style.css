@@ -1233,3 +1233,73 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   SMOOTH REACTION ANIMATIONS
+   ========================================================= */
+
+.post-action[data-react-post] {
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.post-action[data-react-post]:active {
+  transform: scale(0.94);
+}
+
+.post-action[data-react-post].active {
+  transform: scale(1.02);
+}
+
+.reaction-heart {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.reaction-pop .reaction-heart {
+  animation: reactionHeartPop 0.3s ease;
+}
+
+.reaction-count {
+  display: inline-block;
+  min-width: 1.2em;
+  margin-left: 3px;
+  text-align: center;
+}
+
+.reaction-count-pop {
+  animation: reactionCountPop 0.25s ease;
+}
+
+@keyframes reactionHeartPop {
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.35);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes reactionCountPop {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
