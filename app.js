@@ -48,6 +48,10 @@ const state = {
   careMessages: [],
   pinnedMessages: [],
   messageReactions: [],
+  conversations: [],
+  classmates: [],
+  currentConversationId: null,
+  showNewMessage: false,
 
   flashcardDecks: [],
   currentDeck: null,
@@ -2822,13 +2826,116 @@ async function hydrateAssignments() {
    CARE TEAM
    ========================================================= */
 
-async function loadCareMessages() {
-  if (!supabaseClient) return [];
+async function loadCareConversations() {
+  if (!supabaseClient || !state.user) return [];
 
-  const {
-    data,
-    error
-  } = await supabaseClient
+  const { data: conversations, error } = await supabaseClient
+    .from("conversations")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("Conversation load error:", error);
+    state.conversations = [];
+    return [];
+  }
+
+  const { data: members, error: memberError } = await supabaseClient
+    .from("conversation_members")
+    .select(`
+      conversation_id,
+      user_id,
+      profiles (
+        id,
+        display_name,
+        full_name,
+        avatar_url
+      )
+    `);
+
+  if (memberError) {
+    console.error("Conversation member load error:", memberError);
+    state.conversations = [];
+    return [];
+  }
+
+  state.conversations = (conversations || []).map((conversation) => {
+    const conversationMembers = (members || []).filter(
+      (member) => member.conversation_id === conversation.id
+    );
+
+    const otherMember = conversationMembers.find(
+      (member) => member.user_id !== state.user?.id
+    );
+
+    return {
+      ...conversation,
+      members: conversationMembers,
+      otherMember: otherMember?.profiles || null
+    };
+  });
+
+  const group = state.conversations.find(
+    (conversation) =>
+      conversation.type === "group" &&
+      conversation.name === "The Care Team"
+  );
+
+  if (group) {
+    const isMember = group.members.some(
+      (member) => member.user_id === state.user?.id
+    );
+
+    if (!isMember) {
+      const { error: joinError } = await supabaseClient
+        .from("conversation_members")
+        .insert({
+          conversation_id: group.id,
+          user_id: state.user.id
+        });
+
+      if (!joinError) {
+        group.members.push({
+          user_id: state.user.id,
+          profiles: state.profile
+        });
+      }
+    }
+
+    if (!state.currentConversationId) {
+      state.currentConversationId = group.id;
+    }
+  }
+
+  return state.conversations;
+}
+
+async function loadClassmates() {
+  if (!supabaseClient || !state.user) return [];
+
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("id, display_name, full_name, avatar_url")
+    .neq("id", state.user.id)
+    .order("display_name", { ascending: true });
+
+  if (error) {
+    console.error("Classmate load error:", error);
+    state.classmates = [];
+    return [];
+  }
+
+  state.classmates = data || [];
+  return state.classmates;
+}
+
+async function loadCareMessages() {
+  if (!supabaseClient || !state.currentConversationId) {
+    state.careMessages = [];
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
     .from("messages")
     .select(`
       *,
@@ -2839,24 +2946,16 @@ async function loadCareMessages() {
         avatar_url
       )
     `)
-    .order("created_at", {
-      ascending: true
-    });
+    .eq("conversation_id", state.currentConversationId)
+    .order("created_at", { ascending: true });
 
   if (error) {
-    console.error(
-      "Care Team load error:",
-      error
-    );
-
+    console.error("Care Team load error:", error);
     state.careMessages = [];
-
     return [];
   }
 
-  state.careMessages =
-    data || [];
-
+  state.careMessages = data || [];
   return state.careMessages;
 }
 
@@ -2919,66 +3018,221 @@ function isMessagePinned(messageId) {
 }
 
 function renderCareTeam() {
+  const current = state.conversations.find(
+    (conversation) =>
+      conversation.id === state.currentConversationId
+  );
+
+  const isGroup =
+    current?.type === "group";
+
+  const title =
+    isGroup
+      ? "The Care Team"
+      : (
+          current?.otherMember?.display_name ||
+          current?.otherMember?.full_name ||
+          "Direct Message"
+        );
+
+  const subtitle =
+    isGroup
+      ? "Your CNA class group chat."
+      : "Private conversation";
+
   return `
     <section class="page">
 
       <div class="page-header">
-
         <div>
-
-          <p class="eyebrow">
-            COMMUNITY
-          </p>
-
-          <h1>
-            The Care Team
-          </h1>
-
-          <p>
-            Stay connected with your CNA classmates.
-          </p>
-
+          <p class="eyebrow">MESSAGES</p>
+          <h1>The Care Team</h1>
+          <p>Group chat and one-on-one messages with your CNA classmates.</p>
         </div>
-
       </div>
 
-      <div class="panel care-team-panel">
+      <div class="messages-layout">
 
-        <div
-          class="care-team-messages"
-          id="care-team-messages"
-        >
-          ${renderCareMessages()}
-        </div>
+        <aside class="conversation-sidebar panel">
+          <div class="conversation-sidebar-header">
+            <div>
+              <strong>Messages</strong>
+              <span>Stay connected</span>
+            </div>
+            <button
+              class="secondary-button small-button"
+              id="new-message-button"
+              type="button"
+            >
+              + New
+            </button>
+          </div>
 
-        <form
-          id="care-message-form"
-          class="care-message-form"
-        >
+          <div class="conversation-list">
+            ${renderConversationList()}
+          </div>
 
-          <input
-            id="care-message-input"
-            class="text-input"
-            type="text"
-            maxlength="2000"
-            placeholder="Message The Care Team..."
-            autocomplete="off"
-            required
-          />
+          ${state.showNewMessage ? renderNewMessageList() : ""}
+        </aside>
 
-          <button
-            class="primary-button"
-            type="submit"
+        <div class="panel care-team-panel">
+
+          <div class="conversation-header">
+            <div class="conversation-header-avatar">
+              ${isGroup ? "💬" : escapeHtml(getInitials(title))}
+            </div>
+            <div>
+              <strong>${escapeHtml(title)}</strong>
+              <span>${escapeHtml(subtitle)}</span>
+            </div>
+          </div>
+
+          <div
+            class="care-team-messages"
+            id="care-team-messages"
           >
-            Send
-          </button>
+            ${renderCareMessages()}
+          </div>
 
-        </form>
+          <form
+            id="care-message-form"
+            class="care-message-form"
+          >
+            <input
+              id="care-message-input"
+              class="text-input"
+              type="text"
+              maxlength="2000"
+              placeholder="${isGroup ? "Message The Care Team..." : "Write a private message..."}"
+              autocomplete="off"
+              required
+            />
 
+            <button
+              class="primary-button"
+              type="submit"
+            >
+              Send
+            </button>
+          </form>
+
+        </div>
       </div>
 
     </section>
   `;
+}
+
+function renderConversationList() {
+  const group = state.conversations.find(
+    (conversation) =>
+      conversation.type === "group" &&
+      conversation.name === "The Care Team"
+  );
+
+  const direct = state.conversations
+    .filter((conversation) => conversation.type === "direct")
+    .sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.created_at).getTime();
+      const bTime = new Date(b.updated_at || b.created_at).getTime();
+      return bTime - aTime;
+    });
+
+  return `
+    ${group ? `
+      <button
+        class="conversation-item pinned-conversation ${group.id === state.currentConversationId ? "active" : ""}"
+        data-conversation-id="${escapeHtml(group.id)}"
+        type="button"
+      >
+        <span class="conversation-avatar">💬</span>
+        <span class="conversation-item-text">
+          <strong>The Care Team</strong>
+          <small>📌 Pinned group chat</small>
+        </span>
+      </button>
+    ` : ""}
+
+    ${direct.map((conversation) => {
+      const name =
+        conversation.otherMember?.display_name ||
+        conversation.otherMember?.full_name ||
+        "Classmate";
+
+      return `
+        <button
+          class="conversation-item ${conversation.id === state.currentConversationId ? "active" : ""}"
+          data-conversation-id="${escapeHtml(conversation.id)}"
+          type="button"
+        >
+          <span class="conversation-avatar">
+            ${conversation.otherMember?.avatar_url
+              ? `<img src="${escapeHtml(conversation.otherMember.avatar_url)}" alt="" />`
+              : escapeHtml(getInitials(name))}
+          </span>
+          <span class="conversation-item-text">
+            <strong>${escapeHtml(name)}</strong>
+            <small>Direct message</small>
+          </span>
+        </button>
+      `;
+    }).join("")}
+
+    ${!group && !direct.length ? `
+      <div class="conversation-empty">No conversations yet.</div>
+    ` : ""}
+  `;
+}
+
+function renderNewMessageList() {
+  return `
+    <div class="new-message-panel">
+      <div class="new-message-header">
+        <strong>Start a message</strong>
+        <button id="close-new-message" type="button">×</button>
+      </div>
+      <input
+        id="classmate-search"
+        class="text-input"
+        type="search"
+        placeholder="Search classmates..."
+      />
+      <div id="classmate-list">
+        ${renderClassmateList(state.classmates)}
+      </div>
+    </div>
+  `;
+}
+
+function renderClassmateList(classmates) {
+  if (!classmates.length) {
+    return '<div class="conversation-empty">No classmates found.</div>';
+  }
+
+  return classmates.map((classmate) => {
+    const name =
+      classmate.display_name ||
+      classmate.full_name ||
+      "Classmate";
+
+    return `
+      <button
+        class="classmate-item"
+        data-start-dm="${escapeHtml(classmate.id)}"
+        type="button"
+      >
+        <span class="conversation-avatar">
+          ${classmate.avatar_url
+            ? `<img src="${escapeHtml(classmate.avatar_url)}" alt="" />`
+            : escapeHtml(getInitials(name))}
+        </span>
+        <span>
+          <strong>${escapeHtml(name)}</strong>
+          <small>Send a private message</small>
+        </span>
+      </button>
+    `;
+  }).join("");
 }
 
 function renderCareMessages() {
@@ -3121,56 +3375,147 @@ function renderCareMessage(message) {
   `;
 }
 
+async function openConversation(conversationId) {
+  state.currentConversationId = conversationId;
+  state.showNewMessage = false;
+  await hydrateCareTeam();
+}
+
+async function startDirectMessage(targetUserId) {
+  if (!supabaseClient || !state.user || !targetUserId) return;
+
+  const existing = state.conversations.find((conversation) =>
+    conversation.type === "direct" &&
+    conversation.members?.some((member) => member.user_id === targetUserId)
+  );
+
+  if (existing) {
+    state.currentConversationId = existing.id;
+    state.showNewMessage = false;
+    await hydrateCareTeam();
+    return;
+  }
+
+  const { data: conversation, error } = await supabaseClient
+    .from("conversations")
+    .insert({
+      type: "direct",
+      created_by: state.user.id
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    showMessage(error.message || "Unable to start a conversation.", "error");
+    return;
+  }
+
+  const { error: memberError } = await supabaseClient
+    .from("conversation_members")
+    .insert([
+      { conversation_id: conversation.id, user_id: state.user.id },
+      { conversation_id: conversation.id, user_id: targetUserId }
+    ]);
+
+  if (memberError) {
+    await supabaseClient
+      .from("conversations")
+      .delete()
+      .eq("id", conversation.id);
+
+    showMessage(memberError.message || "Unable to add the classmate.", "error");
+    return;
+  }
+
+  state.currentConversationId = conversation.id;
+  state.showNewMessage = false;
+  await hydrateCareTeam();
+}
+
 async function hydrateCareTeam() {
+  await loadCareConversations();
+  await loadClassmates();
+
+  if (!state.currentConversationId) {
+    const group = state.conversations.find(
+      (conversation) =>
+        conversation.type === "group" &&
+        conversation.name === "The Care Team"
+    );
+    state.currentConversationId = group?.id || null;
+  }
+
   await Promise.all([
     loadCareMessages(),
     loadPinnedMessages(),
     loadMessageReactions()
   ]);
 
-  const container =
-    $("#page-container");
-
+  const container = $("#page-container");
   if (!container) return;
 
-  container.innerHTML =
-    renderCareTeam();
+  container.innerHTML = renderCareTeam();
 
-  $("#care-message-form")
-    ?.addEventListener(
-      "submit",
-      handleCareMessageSubmit
+  $("#care-message-form")?.addEventListener(
+    "submit",
+    handleCareMessageSubmit
+  );
+
+  $("#new-message-button")?.addEventListener("click", async () => {
+    state.showNewMessage = true;
+    const current = state.conversations.find(
+      (conversation) => conversation.id === state.currentConversationId
     );
+    await hydrateCareTeam();
+    if (current) state.currentConversationId = current.id;
+  });
 
-  document
-    .querySelectorAll(
-      "[data-edit-message]"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        () =>
-          editCareMessage(
-            button.dataset
-              .editMessage
-          )
+  $("#close-new-message")?.addEventListener("click", async () => {
+    state.showNewMessage = false;
+    await hydrateCareTeam();
+  });
+
+  document.querySelectorAll("[data-conversation-id]").forEach((button) => {
+    button.addEventListener("click", () =>
+      openConversation(button.dataset.conversationId)
+    );
+  });
+
+  document.querySelectorAll("[data-start-dm]").forEach((button) => {
+    button.addEventListener("click", () =>
+      startDirectMessage(button.dataset.startDm)
+    );
+  });
+
+  $("#classmate-search")?.addEventListener("input", (event) => {
+    const query = event.target.value.trim().toLowerCase();
+    const filtered = state.classmates.filter((classmate) => {
+      const name =
+        classmate.display_name ||
+        classmate.full_name ||
+        "";
+      return name.toLowerCase().includes(query);
+    });
+    const list = $("#classmate-list");
+    if (list) list.innerHTML = renderClassmateList(filtered);
+    document.querySelectorAll("[data-start-dm]").forEach((button) => {
+      button.addEventListener("click", () =>
+        startDirectMessage(button.dataset.startDm)
       );
     });
+  });
 
-  document
-    .querySelectorAll(
-      "[data-delete-message]"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        () =>
-          deleteCareMessage(
-            button.dataset
-              .deleteMessage
-          )
-      );
-    });
+  document.querySelectorAll("[data-edit-message]").forEach((button) => {
+    button.addEventListener("click", () =>
+      editCareMessage(button.dataset.editMessage)
+    );
+  });
+
+  document.querySelectorAll("[data-delete-message]").forEach((button) => {
+    button.addEventListener("click", () =>
+      deleteCareMessage(button.dataset.deleteMessage)
+    );
+  });
 
   document.querySelectorAll("[data-react-message]").forEach((button) => {
     button.addEventListener("click", () =>
@@ -3213,6 +3558,7 @@ async function sendCareMessage(content) {
 
   const payload = {
     user_id: state.user.id,
+    conversation_id: state.currentConversationId,
     content
   };
 
@@ -3233,6 +3579,8 @@ async function sendCareMessage(content) {
         .insert({
           user_id:
             state.user.id,
+          conversation_id:
+            state.currentConversationId,
           message: content
         });
   }
