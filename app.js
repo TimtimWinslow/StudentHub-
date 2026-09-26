@@ -5590,7 +5590,7 @@ function renderChapterTracker() {
           </h1>
 
           <p>
-            Enter and manage your chapter test scores.
+            Track your CNA chapter test scores. StudentHub keeps each program's curriculum separate so more programs can be added later.
           </p>
 
         </div>
@@ -6250,7 +6250,7 @@ function renderProgressContent() {
         </div>
 
         ${
-          state.chapters.length
+          getChaptersForClass().length
             ? `
               <div class="chapter-progress-list">
                 ${getChaptersForClass()
