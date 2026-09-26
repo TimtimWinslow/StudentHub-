@@ -957,7 +957,7 @@ async function loadClasses() {
 
   const { data, error } = await supabaseClient
     .from("enrollments")
-    .select(\`
+    .select(`
       id,
       student_id,
       class_id,
@@ -970,8 +970,7 @@ async function loadClasses() {
         created_by,
         created_at
       )
-    \`)
-    .eq("student_id", state.user.id);
+    `)\n    .eq("student_id", state.user.id);
 
   if (error) {
     console.error("Class load error:", error);
@@ -5665,7 +5664,7 @@ function renderChapterTracker() {
               class="text-input"
               required
             >
-              __RENDER_CHAPTER_OPTIONS__
+              ${renderChapterOptions()}
             </select>
 
             <label class="field-label">
