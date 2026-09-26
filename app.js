@@ -6536,7 +6536,7 @@ function renderProfile() {
   const avatar = profile.avatar_url || "";
   const bio = profile.bio || "";
 
-  return \`
+  return `
     <section class="page">
       <div class="page-header profile-page-header">
         <div>
@@ -6557,13 +6557,13 @@ function renderProfile() {
 
           <div class="profile-preview">
             <div class="profile-preview-avatar">
-              \${avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Profile picture" />' : escapeHtml(getInitials(name))}
+              ${avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Profile picture" />' : escapeHtml(getInitials(name))}
             </div>
-            <h2>\${escapeHtml(name)}</h2>
-            <p class="profile-preview-email">\${escapeHtml(state.user?.email || "")}</p>
+            <h2>${escapeHtml(name)}</h2>
+            <p class="profile-preview-email">${escapeHtml(state.user?.email || "")}</p>
             <p class="profile-preview-role">Student</p>
             <div class="profile-preview-bio">
-              \${bio ? escapeHtml(bio) : "Add a short bio so your classmates can get to know you."}
+              ${bio ? escapeHtml(bio) : "Add a short bio so your classmates can get to know you."}
             </div>
           </div>
         </section>
@@ -6579,7 +6579,7 @@ function renderProfile() {
           <form id="profile-form" class="profile-form">
             <div class="profile-photo-editor">
               <div class="profile-form-avatar" id="profile-form-avatar">
-                \${avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Current profile picture" />' : escapeHtml(getInitials(name))}
+                ${avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Current profile picture" />' : escapeHtml(getInitials(name))}
               </div>
               <div>
                 <strong>Profile picture</strong>
@@ -6593,17 +6593,17 @@ function renderProfile() {
 
             <label class="field-label" for="profile-display-name">Display name</label>
             <input id="profile-display-name" class="text-input" type="text" maxlength="80"
-              value="\${escapeHtml(profile.display_name || name)}"
+              value="${escapeHtml(profile.display_name || name)}"
               placeholder="How classmates should see you" required />
 
             <label class="field-label" for="profile-full-name">Full name</label>
             <input id="profile-full-name" class="text-input" type="text" maxlength="120"
-              value="\${escapeHtml(profile.full_name || state.user?.user_metadata?.full_name || name)}"
+              value="${escapeHtml(profile.full_name || state.user?.user_metadata?.full_name || name)}"
               placeholder="Your full name" />
 
             <label class="field-label" for="profile-bio">Bio</label>
             <textarea id="profile-bio" class="text-input profile-bio-input" maxlength="240" rows="4"
-              placeholder="Tell your classmates a little about yourself...">\${escapeHtml(bio)}</textarea>
+              placeholder="Tell your classmates a little about yourself...">${escapeHtml(bio)}</textarea>
 
             <div id="profile-message" class="form-error"></div>
             <button class="primary-button" type="submit">Save Profile</button>
@@ -6611,7 +6611,7 @@ function renderProfile() {
         </section>
       </div>
     </section>
-  \`;
+  `;
 }
 
 async function hydrateProfile() {
