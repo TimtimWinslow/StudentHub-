@@ -3510,6 +3510,50 @@ img {
    CARE TEAM
    ========================================================= */
 
+.messages-page-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.messages-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.messages-page-header strong,
+.messages-page-header span {
+  display: block;
+}
+
+.messages-page-header span {
+  margin-top: .2rem;
+  color: var(--text-secondary);
+  font-size: .82rem;
+}
+
+.messages-page-list {
+  padding: .75rem;
+}
+
+.messages-page-panel .conversation-empty {
+  padding: 3rem 1rem;
+}
+
+@media (max-width: 700px) {
+  .messages-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .messages-page-header .small-button {
+    width: 100%;
+  }
+}
+
 .messages-layout {
   display: grid;
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
