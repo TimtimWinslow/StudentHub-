@@ -970,7 +970,8 @@ async function loadClasses() {
         created_by,
         created_at
       )
-    `)\n    .eq("student_id", state.user.id);
+    `)
+    .eq("student_id", state.user.id);
 
   if (error) {
     console.error("Class load error:", error);
