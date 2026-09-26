@@ -43,7 +43,14 @@ const state = {
   currentPage: "home",
   studyToolsOpen: false,
   accountMenuOpen: false,
-  mobileMenuOpen: false
+  mobileMenuOpen: false,
+
+  /* Chapter Tracker state */
+  trackerClasses: [],
+  trackerChapters: [],
+  trackerScores: [],
+  trackerSelectedClassId: "",
+  trackerEditingScoreId: null
 };
 
 /* =========================================================
@@ -128,6 +135,43 @@ function formatDate(value) {
     hour: "numeric",
     minute: "2-digit"
   });
+}
+
+function formatTestDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(`${value}T00:00:00`);
+
+  return date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
+function getLetterGrade(score) {
+  const number = Number(score);
+
+  if (Number.isNaN(number)) return "—";
+
+  if (number >= 90) return "A";
+  if (number >= 80) return "B";
+  if (number >= 70) return "C";
+  if (number >= 60) return "D";
+
+  return "F";
+}
+
+function getGradeClass(score) {
+  const grade = getLetterGrade(score);
+
+  if (grade === "A") return "grade-a";
+  if (grade === "B") return "grade-b";
+  if (grade === "C") return "grade-c";
+  if (grade === "D") return "grade-d";
+  if (grade === "F") return "grade-f";
+
+  return "";
 }
 
 /* =========================================================
@@ -358,7 +402,7 @@ function renderApp() {
         ${renderTopbar()}
 
         <section id="page-content">
-          ${renderHome()}
+          ${renderCurrentPage()}
         </section>
 
       </main>
@@ -373,6 +417,127 @@ function renderApp() {
   `;
 
   attachAppListeners();
+
+  if (state.currentPage === "home") {
+    loadHomepageData();
+  }
+
+  if (state.currentPage === "chapter-tracker") {
+    loadChapterTracker();
+  }
+}
+
+/* =========================================================
+   PAGE ROUTER
+   ========================================================= */
+
+function renderCurrentPage() {
+
+  switch (state.currentPage) {
+
+    case "chapter-tracker":
+      return renderChapterTracker();
+
+    case "calendar":
+      return renderComingSoonPage(
+        "📅",
+        "Calendar",
+        "Your class and personal calendar will live here."
+      );
+
+    case "care-team":
+      return renderComingSoonPage(
+        "💬",
+        "The Care Team",
+        "Your class messaging system will live here."
+      );
+
+    case "flashcards":
+      return renderComingSoonPage(
+        "🧠",
+        "Flashcards",
+        "Your flashcard decks will live here."
+      );
+
+    case "quiz-maker":
+      return renderComingSoonPage(
+        "📝",
+        "Quiz Maker",
+        "Your custom quizzes will live here."
+      );
+
+    case "study-timer":
+      return renderComingSoonPage(
+        "⏱️",
+        "Study Timer",
+        "Your study timer will live here."
+      );
+
+    case "study-checklist":
+      return renderComingSoonPage(
+        "✅",
+        "Study Checklist",
+        "Your study checklist will live here."
+      );
+
+    case "progress":
+      return renderComingSoonPage(
+        "📈",
+        "Progress",
+        "Detailed academic analytics will live here."
+      );
+
+    case "home":
+    default:
+      return renderHome();
+  }
+}
+
+/* =========================================================
+   COMING SOON
+   ========================================================= */
+
+function renderComingSoonPage(
+  icon,
+  title,
+  description
+) {
+
+  return `
+    <div class="page">
+
+      <section class="panel">
+
+        <div class="panel-header">
+          <h2>
+            ${icon} ${escapeHtml(title)}
+          </h2>
+        </div>
+
+        <div class="panel-body">
+
+          <div class="empty-state">
+
+            <div class="empty-state-icon">
+              ${icon}
+            </div>
+
+            <strong>
+              ${escapeHtml(title)}
+            </strong>
+
+            <span>
+              ${escapeHtml(description)}
+            </span>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  `;
 }
 
 /* =========================================================
@@ -960,6 +1125,1390 @@ function renderActivePanel() {
 }
 
 /* =========================================================
+   CHAPTER TRACKER
+   ========================================================= */
+
+function renderChapterTracker() {
+
+  const selectedClass =
+    state.trackerClasses.find(
+      (item) =>
+        item.id ===
+        state.trackerSelectedClassId
+    );
+
+  const classOptions =
+    state.trackerClasses
+      .map(
+        (item) => `
+          <option
+            value="${escapeHtml(item.id)}"
+            ${
+              item.id ===
+              state.trackerSelectedClassId
+                ? "selected"
+                : ""
+            }
+          >
+            ${escapeHtml(item.name)}
+          </option>
+        `
+      )
+      .join("");
+
+  const editingScore =
+    state.trackerScores.find(
+      (score) =>
+        score.id ===
+        state.trackerEditingScoreId
+    );
+
+  const chapterOptions =
+    state.trackerChapters
+      .map(
+        (chapter) => `
+          <option
+            value="${escapeHtml(
+              chapter.id
+            )}"
+            ${
+              editingScore &&
+              String(
+                editingScore.chapter_id
+              ) ===
+                String(chapter.id)
+                ? "selected"
+                : ""
+            }
+          >
+            Chapter ${escapeHtml(
+              chapter.chapter_number
+            )}
+            — ${escapeHtml(
+              chapter.title
+            )}
+          </option>
+        `
+      )
+      .join("");
+
+  const scoreValue =
+    editingScore?.score ??
+    "";
+
+  const dateValue =
+    editingScore?.test_date ??
+    "";
+
+  const completedChapterIds =
+    new Set(
+      state.trackerScores.map(
+        (score) =>
+          String(score.chapter_id)
+      )
+    );
+
+  const completedCount =
+    completedChapterIds.size;
+
+  const totalChapters =
+    state.trackerChapters.length;
+
+  const progress =
+    totalChapters
+      ? Math.round(
+          (completedCount /
+            totalChapters) *
+            100
+        )
+      : 0;
+
+  return `
+    <div class="page">
+
+      <section class="welcome-section">
+
+        <h1>
+          📖 Chapter Tracker
+        </h1>
+
+        <p>
+          Track your chapter test scores and academic progress.
+        </p>
+
+      </section>
+
+      <section class="panel">
+
+        <div class="panel-header">
+
+          <div>
+
+            <h2>
+              ${editingScore
+                ? "✏️ Edit Score"
+                : "➕ Add Chapter Score"}
+            </h2>
+
+            <p class="panel-subtitle">
+              Scores are saved directly to your StudentHub academic record.
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="panel-body">
+
+          ${
+            state.trackerClasses.length === 0
+              ? `
+                <div class="empty-state">
+
+                  <div class="empty-state-icon">
+                    📚
+                  </div>
+
+                  <strong>
+                    No class found
+                  </strong>
+
+                  <span>
+                    You need to be enrolled in a class before adding scores.
+                  </span>
+
+                </div>
+              `
+              : `
+                <form
+                  id="chapter-score-form"
+                  class="auth-form"
+                >
+
+                  <div class="form-group">
+
+                    <label for="tracker-class">
+                      Class
+                    </label>
+
+                    <select
+                      id="tracker-class"
+                      required
+                    >
+                      ${classOptions}
+                    </select>
+
+                  </div>
+
+                  <div class="form-group">
+
+                    <label for="tracker-chapter">
+                      Chapter
+                    </label>
+
+                    <select
+                      id="tracker-chapter"
+                      required
+                    >
+
+                      <option value="">
+                        Select a chapter
+                      </option>
+
+                      ${chapterOptions}
+
+                    </select>
+
+                  </div>
+
+                  <div class="form-group">
+
+                    <label for="tracker-score">
+                      Score
+                    </label>
+
+                    <input
+                      id="tracker-score"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value="${escapeHtml(
+                        scoreValue
+                      )}"
+                      placeholder="Enter score"
+                      required
+                    />
+
+                  </div>
+
+                  <div class="form-group">
+
+                    <label for="tracker-test-date">
+                      Test Date
+                    </label>
+
+                    <input
+                      id="tracker-test-date"
+                      type="date"
+                      value="${escapeHtml(
+                        dateValue
+                      )}"
+                      required
+                    />
+
+                  </div>
+
+                  <div
+                    id="tracker-form-message"
+                    class="auth-message"
+                    aria-live="polite"
+                  ></div>
+
+                  <div
+                    style="
+                      display:flex;
+                      gap:10px;
+                      flex-wrap:wrap;
+                    "
+                  >
+
+                    <button
+                      type="submit"
+                      class="primary-button"
+                      id="save-score-button"
+                    >
+                      ${
+                        editingScore
+                          ? "Save Changes"
+                          : "Add Score"
+                      }
+                    </button>
+
+                    ${
+                      editingScore
+                        ? `
+                          <button
+                            type="button"
+                            class="secondary-button"
+                            id="cancel-edit-score"
+                          >
+                            Cancel
+                          </button>
+                        `
+                        : ""
+                    }
+
+                  </div>
+
+                </form>
+              `
+          }
+
+        </div>
+
+      </section>
+
+      ${
+        state.trackerClasses.length > 0
+          ? `
+            <section class="panel">
+
+              <div class="panel-header">
+
+                <div>
+
+                  <h2>📊 Chapter Progress</h2>
+
+                  <p class="panel-subtitle">
+                    ${
+                      selectedClass
+                        ? escapeHtml(
+                            selectedClass.name
+                          )
+                        : "Select a class"
+                    }
+                  </p>
+
+                </div>
+
+                <div class="status-value">
+                  ${completedCount}/${totalChapters}
+                  · ${progress}%
+                </div>
+
+              </div>
+
+              <div class="panel-body">
+
+                <div class="status-list">
+
+                  ${state.trackerChapters
+                    .map(
+                      (chapter) => {
+
+                        const chapterScores =
+                          state.trackerScores.filter(
+                            (score) =>
+                              String(
+                                score.chapter_id
+                              ) ===
+                              String(
+                                chapter.id
+                              )
+                          );
+
+                        const latestScore =
+                          [...chapterScores]
+                            .sort(
+                              (
+                                a,
+                                b
+                              ) =>
+                                new Date(
+                                  b.test_date ||
+                                  b.created_at
+                                ) -
+                                new Date(
+                                  a.test_date ||
+                                  a.created_at
+                                )
+                            )[0];
+
+                        const completed =
+                          chapterScores.length >
+                          0;
+
+                        return `
+                          <div
+                            class="status-item"
+                            style="
+                              align-items:flex-start;
+                              gap:16px;
+                            "
+                          >
+
+                            <div
+                              style="
+                                flex:1;
+                                min-width:0;
+                              "
+                            >
+
+                              <div
+                                class="status-label"
+                              >
+                                Chapter
+                                ${escapeHtml(
+                                  chapter.chapter_number
+                                )}
+                              </div>
+
+                              <div
+                                style="
+                                  margin-top:4px;
+                                  font-size:.9rem;
+                                  opacity:.8;
+                                "
+                              >
+                                ${escapeHtml(
+                                  chapter.title
+                                )}
+                              </div>
+
+                            </div>
+
+                            <div
+                              style="
+                                text-align:right;
+                                min-width:110px;
+                              "
+                            >
+
+                              ${
+                                completed
+                                  ? `
+                                    <div
+                                      class="status-value"
+                                    >
+                                      ${Number(
+                                        latestScore.score
+                                      ).toFixed(
+                                        0
+                                      )}%
+
+                                      <span
+                                        class="${getGradeClass(
+                                          latestScore.score
+                                        )}"
+                                      >
+                                        ${getLetterGrade(
+                                          latestScore.score
+                                        )}
+                                      </span>
+                                    </div>
+
+                                    <div
+                                      style="
+                                        font-size:.78rem;
+                                        opacity:.7;
+                                        margin-top:3px;
+                                      "
+                                    >
+                                      ${formatTestDate(
+                                        latestScore.test_date
+                                      )}
+                                    </div>
+                                  `
+                                  : `
+                                    <div
+                                      class="status-value"
+                                      style="opacity:.65;"
+                                    >
+                                      Pending
+                                    </div>
+                                  `
+                              }
+
+                            </div>
+
+                          </div>
+                        `;
+                      }
+                    )
+                    .join("")}
+
+                </div>
+
+              </div>
+
+            </section>
+
+            <section class="panel">
+
+              <div class="panel-header">
+
+                <div>
+
+                  <h2>📝 Score History</h2>
+
+                  <p class="panel-subtitle">
+                    ${
+                      selectedClass
+                        ? escapeHtml(
+                            selectedClass.name
+                          )
+                        : ""
+                    }
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div class="panel-body">
+
+                ${
+                  state.trackerScores.length === 0
+                    ? `
+                      <div class="empty-state">
+
+                        <div class="empty-state-icon">
+                          📝
+                        </div>
+
+                        <strong>
+                          No scores yet
+                        </strong>
+
+                        <span>
+                          Add your first chapter score above.
+                        </span>
+
+                      </div>
+                    `
+                    : `
+                      <div
+                        class="status-list"
+                      >
+
+                        ${[
+                          ...state.trackerScores
+                        ]
+                          .sort(
+                            (
+                              a,
+                              b
+                            ) =>
+                              new Date(
+                                b.test_date ||
+                                b.created_at
+                              ) -
+                              new Date(
+                                a.test_date ||
+                                a.created_at
+                              )
+                          )
+                          .map(
+                            (
+                              score
+                            ) => {
+
+                              const chapter =
+                                state.trackerChapters.find(
+                                  (
+                                    item
+                                  ) =>
+                                    String(
+                                      item.id
+                                    ) ===
+                                    String(
+                                      score.chapter_id
+                                    )
+                                );
+
+                              return `
+                                <div
+                                  class="status-item"
+                                  style="
+                                    align-items:center;
+                                    gap:12px;
+                                  "
+                                >
+
+                                  <div
+                                    style="
+                                      flex:1;
+                                      min-width:0;
+                                    "
+                                  >
+
+                                    <div
+                                      class="status-label"
+                                    >
+                                      ${
+                                        chapter
+                                          ? `Chapter ${escapeHtml(
+                                              chapter.chapter_number
+                                            )}`
+                                          : "Chapter"
+                                      }
+                                    </div>
+
+                                    <div
+                                      style="
+                                        font-size:.82rem;
+                                        opacity:.7;
+                                        margin-top:3px;
+                                      "
+                                    >
+                                      ${formatTestDate(
+                                        score.test_date
+                                      )}
+                                    </div>
+
+                                  </div>
+
+                                  <div
+                                    class="status-value"
+                                  >
+                                    ${Number(
+                                      score.score
+                                    ).toFixed(
+                                      0
+                                    )}%
+
+                                    <span
+                                      class="${getGradeClass(
+                                        score.score
+                                      )}"
+                                    >
+                                      ${getLetterGrade(
+                                        score.score
+                                      )}
+                                    </span>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    class="small-button"
+                                    data-edit-score="${escapeHtml(
+                                      score.id
+                                    )}"
+                                  >
+                                    ✏️
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    class="post-action danger"
+                                    data-delete-score="${escapeHtml(
+                                      score.id
+                                    )}"
+                                  >
+                                    🗑️
+                                  </button>
+
+                                </div>
+                              `;
+                            }
+                          )
+                          .join("")}
+
+                      </div>
+                    `
+                }
+
+              </div>
+
+            </section>
+          `
+          : ""
+      }
+
+    </div>
+  `;
+}
+
+/* =========================================================
+   CHAPTER TRACKER — LOAD CLASSES
+   ========================================================= */
+
+async function loadTrackerClasses() {
+
+  if (
+    !supabaseClient ||
+    !state.user
+  ) {
+    return;
+  }
+
+  const {
+    data: enrollments,
+    error
+  } =
+    await supabaseClient
+      .from("enrollments")
+      .select(
+        "class_id, role"
+      )
+      .eq(
+        "student_id",
+        state.user.id
+      );
+
+  if (error) {
+
+    console.error(
+      "Class enrollment loading error:",
+      error
+    );
+
+    state.trackerClasses = [];
+
+    return;
+  }
+
+  if (
+    !enrollments ||
+    enrollments.length === 0
+  ) {
+
+    state.trackerClasses = [];
+
+    return;
+  }
+
+  const classIds =
+    [
+      ...new Set(
+        enrollments
+          .map(
+            (item) =>
+              item.class_id
+          )
+          .filter(Boolean)
+      )
+    ];
+
+  if (!classIds.length) {
+
+    state.trackerClasses = [];
+
+    return;
+  }
+
+  const {
+    data: classes,
+    error: classesError
+  } =
+    await supabaseClient
+      .from("classes")
+      .select(
+        "id, name"
+      )
+      .in(
+        "id",
+        classIds
+      )
+      .order(
+        "name",
+        {
+          ascending: true
+        }
+      );
+
+  if (classesError) {
+
+    console.error(
+      "Class loading error:",
+      classesError
+    );
+
+    state.trackerClasses = [];
+
+    return;
+  }
+
+  state.trackerClasses =
+    classes || [];
+
+  if (
+    !state.trackerSelectedClassId &&
+    state.trackerClasses.length
+  ) {
+
+    state.trackerSelectedClassId =
+      state.trackerClasses[0].id;
+
+  }
+}
+
+/* =========================================================
+   CHAPTER TRACKER — LOAD CHAPTERS
+   ========================================================= */
+
+async function loadTrackerChapters() {
+
+  if (!supabaseClient) {
+    return;
+  }
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("chapters")
+      .select(
+        "id, chapter_number, title"
+      )
+      .order(
+        "chapter_number",
+        {
+          ascending: true
+        }
+      );
+
+  if (error) {
+
+    console.error(
+      "Chapter loading error:",
+      error
+    );
+
+    state.trackerChapters = [];
+
+    return;
+  }
+
+  state.trackerChapters =
+    data || [];
+}
+
+/* =========================================================
+   CHAPTER TRACKER — LOAD SCORES
+   ========================================================= */
+
+async function loadTrackerScores() {
+
+  if (
+    !supabaseClient ||
+    !state.user ||
+    !state.trackerSelectedClassId
+  ) {
+    state.trackerScores = [];
+
+    return;
+  }
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("scores")
+      .select(
+        "id, class_id, chapter_id, score, test_date, created_at, updated_at"
+      )
+      .eq(
+        "user_id",
+        state.user.id
+      )
+      .eq(
+        "class_id",
+        state.trackerSelectedClassId
+      )
+      .order(
+        "test_date",
+        {
+          ascending: false
+        }
+      );
+
+  if (error) {
+
+    console.error(
+      "Score loading error:",
+      error
+    );
+
+    state.trackerScores = [];
+
+    return;
+  }
+
+  state.trackerScores =
+    data || [];
+}
+
+/* =========================================================
+   CHAPTER TRACKER — LOAD EVERYTHING
+   ========================================================= */
+
+async function loadChapterTracker() {
+
+  const content =
+    document.getElementById(
+      "page-content"
+    );
+
+  if (!content) {
+    return;
+  }
+
+  try {
+
+    await Promise.all([
+      loadTrackerClasses(),
+      loadTrackerChapters()
+    ]);
+
+    await loadTrackerScores();
+
+    content.innerHTML =
+      renderChapterTracker();
+
+    attachChapterTrackerListeners();
+
+  } catch (error) {
+
+    console.error(
+      "Chapter Tracker loading error:",
+      error
+    );
+
+    content.innerHTML = `
+      <div class="page">
+
+        <section class="panel">
+
+          <div class="panel-body">
+
+            <div class="empty-state">
+
+              <div class="empty-state-icon">
+                ⚠️
+              </div>
+
+              <strong>
+                Chapter Tracker couldn't load
+              </strong>
+
+              <span>
+                Please refresh the page and try again.
+              </span>
+
+            </div>
+
+          </div>
+
+        </section>
+
+      </div>
+    `;
+  }
+}
+
+/* =========================================================
+   CHAPTER TRACKER — LISTENERS
+   ========================================================= */
+
+function attachChapterTrackerListeners() {
+
+  const form =
+    document.getElementById(
+      "chapter-score-form"
+    );
+
+  if (form) {
+
+    form.addEventListener(
+      "submit",
+      saveChapterScore
+    );
+
+  }
+
+  const classSelect =
+    document.getElementById(
+      "tracker-class"
+    );
+
+  if (classSelect) {
+
+    classSelect.addEventListener(
+      "change",
+      async (event) => {
+
+        state.trackerSelectedClassId =
+          event.target.value;
+
+        state.trackerEditingScoreId =
+          null;
+
+        await loadTrackerScores();
+
+        const content =
+          document.getElementById(
+            "page-content"
+          );
+
+        if (content) {
+
+          content.innerHTML =
+            renderChapterTracker();
+
+          attachChapterTrackerListeners();
+
+        }
+
+      }
+    );
+
+  }
+
+  document
+    .querySelectorAll(
+      "[data-edit-score]"
+    )
+    .forEach(
+      (button) => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            editChapterScore(
+              button.dataset.editScore
+            );
+
+          }
+        );
+
+      }
+    );
+
+  document
+    .querySelectorAll(
+      "[data-delete-score]"
+    )
+    .forEach(
+      (button) => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            deleteChapterScore(
+              button.dataset.deleteScore
+            );
+
+          }
+        );
+
+      }
+    );
+
+  const cancelButton =
+    document.getElementById(
+      "cancel-edit-score"
+    );
+
+  if (cancelButton) {
+
+    cancelButton.addEventListener(
+      "click",
+      () => {
+
+        state.trackerEditingScoreId =
+          null;
+
+        const content =
+          document.getElementById(
+            "page-content"
+          );
+
+        if (content) {
+
+          content.innerHTML =
+            renderChapterTracker();
+
+          attachChapterTrackerListeners();
+
+        }
+
+      }
+    );
+
+  }
+}
+
+/* =========================================================
+   CHAPTER TRACKER — SAVE SCORE
+   ========================================================= */
+
+async function saveChapterScore(event) {
+
+  event.preventDefault();
+
+  if (
+    !supabaseClient ||
+    !state.user
+  ) {
+    return;
+  }
+
+  const classId =
+    document.getElementById(
+      "tracker-class"
+    )?.value;
+
+  const chapterId =
+    document.getElementById(
+      "tracker-chapter"
+    )?.value;
+
+  const scoreInput =
+    document.getElementById(
+      "tracker-score"
+    )?.value;
+
+  const testDate =
+    document.getElementById(
+      "tracker-test-date"
+    )?.value;
+
+  const message =
+    document.getElementById(
+      "tracker-form-message"
+    );
+
+  const button =
+    document.getElementById(
+      "save-score-button"
+    );
+
+  const score =
+    Number(scoreInput);
+
+  if (
+    !classId ||
+    !chapterId ||
+    !testDate ||
+    Number.isNaN(score)
+  ) {
+
+    if (message) {
+      message.textContent =
+        "Please complete every field.";
+    }
+
+    return;
+  }
+
+  if (
+    score < 0 ||
+    score > 100
+  ) {
+
+    if (message) {
+      message.textContent =
+        "Score must be between 0 and 100.";
+    }
+
+    return;
+  }
+
+  if (button) {
+
+    button.disabled = true;
+    button.textContent =
+      state.trackerEditingScoreId
+        ? "Saving..."
+        : "Adding...";
+
+  }
+
+  try {
+
+    let error = null;
+
+    if (state.trackerEditingScoreId) {
+
+      const result =
+        await supabaseClient
+          .from("scores")
+          .update({
+            class_id: classId,
+            chapter_id:
+              Number(chapterId),
+            score,
+            test_date,
+            updated_at:
+              new Date().toISOString()
+          })
+          .eq(
+            "id",
+            state.trackerEditingScoreId
+          )
+          .eq(
+            "user_id",
+            state.user.id
+          );
+
+      error = result.error;
+
+    } else {
+
+      const result =
+        await supabaseClient
+          .from("scores")
+          .insert({
+            user_id:
+              state.user.id,
+            class_id: classId,
+            chapter_id:
+              Number(chapterId),
+            score,
+            test_date
+          });
+
+      error = result.error;
+    }
+
+    if (error) {
+      throw error;
+    }
+
+    state.trackerSelectedClassId =
+      classId;
+
+    state.trackerEditingScoreId =
+      null;
+
+    await loadTrackerScores();
+
+    const content =
+      document.getElementById(
+        "page-content"
+      );
+
+    if (content) {
+
+      content.innerHTML =
+        renderChapterTracker();
+
+      attachChapterTrackerListeners();
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Score save error:",
+      error
+    );
+
+    if (message) {
+
+      message.textContent =
+        "Unable to save the score: " +
+        (
+          error?.message ||
+          "Unknown error."
+        );
+
+    }
+
+    if (button) {
+
+      button.disabled = false;
+
+      button.textContent =
+        state.trackerEditingScoreId
+          ? "Save Changes"
+          : "Add Score";
+
+    }
+  }
+}
+
+/* =========================================================
+   CHAPTER TRACKER — EDIT
+   ========================================================= */
+
+function editChapterScore(scoreId) {
+
+  const score =
+    state.trackerScores.find(
+      (item) =>
+        String(item.id) ===
+        String(scoreId)
+    );
+
+  if (!score) {
+    return;
+  }
+
+  state.trackerEditingScoreId =
+    score.id;
+
+  state.trackerSelectedClassId =
+    score.class_id;
+
+  const content =
+    document.getElementById(
+      "page-content"
+    );
+
+  if (!content) {
+    return;
+  }
+
+  content.innerHTML =
+    renderChapterTracker();
+
+  attachChapterTrackerListeners();
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+/* =========================================================
+   CHAPTER TRACKER — DELETE
+   ========================================================= */
+
+async function deleteChapterScore(
+  scoreId
+) {
+
+  if (
+    !supabaseClient ||
+    !state.user
+  ) {
+    return;
+  }
+
+  const score =
+    state.trackerScores.find(
+      (item) =>
+        String(item.id) ===
+        String(scoreId)
+    );
+
+  if (!score) {
+    return;
+  }
+
+  const confirmed =
+    window.confirm(
+      "Delete this chapter score? This cannot be undone."
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const {
+    error
+  } =
+    await supabaseClient
+      .from("scores")
+      .delete()
+      .eq(
+        "id",
+        scoreId
+      )
+      .eq(
+        "user_id",
+        state.user.id
+      );
+
+  if (error) {
+
+    console.error(
+      "Score deletion error:",
+      error
+    );
+
+    alert(
+      "Unable to delete this score."
+    );
+
+    return;
+  }
+
+  if (
+    state.trackerEditingScoreId ===
+    scoreId
+  ) {
+
+    state.trackerEditingScoreId =
+      null;
+
+  }
+
+  await loadTrackerScores();
+
+  const content =
+    document.getElementById(
+      "page-content"
+    );
+
+  if (content) {
+
+    content.innerHTML =
+      renderChapterTracker();
+
+    attachChapterTrackerListeners();
+
+  }
+}
+
+/* =========================================================
    EVENT LISTENERS
    ========================================================= */
 
@@ -976,16 +2525,13 @@ function attachAppListeners() {
           state.currentPage =
             button.dataset.page;
 
-          state.mobileMenuOpen = false;
-          state.accountMenuOpen = false;
+          state.mobileMenuOpen =
+            false;
+
+          state.accountMenuOpen =
+            false;
 
           renderApp();
-
-          if (
-            state.currentPage === "home"
-          ) {
-            loadHomepageData();
-          }
 
         }
       );
@@ -1040,10 +2586,12 @@ function attachAppListeners() {
     );
 
   if (signOutButton) {
+
     signOutButton.addEventListener(
       "click",
       signOut
     );
+
   }
 
   const mobileMenuButton =
@@ -1078,7 +2626,8 @@ function attachAppListeners() {
       "click",
       () => {
 
-        state.mobileMenuOpen = false;
+        state.mobileMenuOpen =
+          false;
 
         renderApp();
 
@@ -1100,11 +2649,6 @@ function attachAppListeners() {
     );
 
   }
-
-  /*
-    IMPORTANT:
-    Connect reaction buttons.
-  */
 
   document
     .querySelectorAll("[data-react-post]")
@@ -1164,15 +2708,16 @@ function attachAppListeners() {
 
 function navigateTo(page) {
 
-  state.currentPage = page;
-  state.accountMenuOpen = false;
-  state.mobileMenuOpen = false;
+  state.currentPage =
+    page;
+
+  state.accountMenuOpen =
+    false;
+
+  state.mobileMenuOpen =
+    false;
 
   renderApp();
-
-  if (page === "home") {
-    loadHomepageData();
-  }
 }
 
 /* =========================================================
@@ -1205,7 +2750,10 @@ async function loadFeed() {
       "feed-list"
     );
 
-  if (!feedList || !supabaseClient) {
+  if (
+    !feedList ||
+    !supabaseClient
+  ) {
     return;
   }
 
@@ -1246,7 +2794,10 @@ async function loadFeed() {
     return;
   }
 
-  if (!posts || posts.length === 0) {
+  if (
+    !posts ||
+    posts.length === 0
+  ) {
 
     feedList.innerHTML = `
       <div class="empty-state">
@@ -1302,9 +2853,15 @@ async function loadFeed() {
   (reactions || []).forEach(
     (reaction) => {
 
-      if (!reactionMap[reaction.post_id]) {
+      if (
+        !reactionMap[
+          reaction.post_id
+        ]
+      ) {
 
-        reactionMap[reaction.post_id] = {
+        reactionMap[
+          reaction.post_id
+        ] = {
           count: 0,
           reactedByUser: false
         };
@@ -1346,7 +2903,9 @@ async function loadFeed() {
           getInitials(name);
 
         const reactionInfo =
-          reactionMap[post.id] || {
+          reactionMap[
+            post.id
+          ] || {
             count: 0,
             reactedByUser: false
           };
@@ -1407,7 +2966,9 @@ async function loadFeed() {
             <div class="post-header">
 
               <div class="avatar">
-                ${escapeHtml(initials)}
+                ${escapeHtml(
+                  initials
+                )}
               </div>
 
               <div class="post-author-area">
@@ -1484,11 +3045,6 @@ async function loadFeed() {
       })
       .join("");
 
-  /*
-    Attach reaction listeners after
-    the feed has been rendered.
-  */
-
   document
     .querySelectorAll(
       "[data-react-post]"
@@ -1541,7 +3097,8 @@ async function togglePostReaction(
     return;
   }
 
-  button.dataset.loading = "true";
+  button.dataset.loading =
+    "true";
 
   const wasReacted =
     button.classList.contains(
@@ -1555,7 +3112,10 @@ async function togglePostReaction(
     await supabaseClient
       .from("feed_reactions")
       .select("id")
-      .eq("post_id", postId)
+      .eq(
+        "post_id",
+        postId
+      )
       .eq(
         "user_id",
         state.user.id
@@ -1573,16 +3133,20 @@ async function togglePostReaction(
       findError
     );
 
-    button.dataset.loading = "false";
+    button.dataset.loading =
+      "false";
 
     return;
   }
 
-  let success = false;
+  let success =
+    false;
 
   if (existingReaction) {
 
-    const { error } =
+    const {
+      error
+    } =
       await supabaseClient
         .from("feed_reactions")
         .delete()
@@ -1606,12 +3170,15 @@ async function togglePostReaction(
 
   } else {
 
-    const { error } =
+    const {
+      error
+    } =
       await supabaseClient
         .from("feed_reactions")
         .insert({
           post_id: postId,
-          user_id: state.user.id,
+          user_id:
+            state.user.id,
           reaction: "heart"
         });
 
@@ -1632,7 +3199,8 @@ async function togglePostReaction(
 
   if (!success) {
 
-    button.dataset.loading = "false";
+    button.dataset.loading =
+      "false";
 
     return;
   }
@@ -1683,10 +3251,6 @@ async function togglePostReaction(
     }
   `;
 
-  /*
-    Smooth heart animation.
-  */
-
   if (!wasReacted) {
 
     button.classList.add(
@@ -1702,10 +3266,6 @@ async function togglePostReaction(
     }, 300);
 
   }
-
-  /*
-    Smooth number animation.
-  */
 
   const count =
     button.querySelector(
@@ -1726,7 +3286,8 @@ async function togglePostReaction(
 
   }
 
-  button.dataset.loading = "false";
+  button.dataset.loading =
+    "false";
 }
 
 /* =========================================================
@@ -1762,16 +3323,22 @@ async function createPost() {
 
   if (button) {
 
-    button.disabled = true;
-    button.textContent = "Posting...";
+    button.disabled =
+      true;
+
+    button.textContent =
+      "Posting...";
 
   }
 
-  const { error } =
+  const {
+    error
+  } =
     await supabaseClient
       .from("feed_posts")
       .insert({
-        user_id: state.user.id,
+        user_id:
+          state.user.id,
         content
       });
 
@@ -1784,8 +3351,11 @@ async function createPost() {
 
     if (button) {
 
-      button.disabled = false;
-      button.textContent = "Post";
+      button.disabled =
+        false;
+
+      button.textContent =
+        "Post";
 
     }
 
@@ -1800,8 +3370,11 @@ async function createPost() {
 
   if (button) {
 
-    button.disabled = false;
-    button.textContent = "Post";
+    button.disabled =
+      false;
+
+    button.textContent =
+      "Post";
 
   }
 
@@ -1889,7 +3462,8 @@ async function loadActiveUsers() {
 
   const userIds =
     presenceData.map(
-      (user) => user.user_id
+      (user) =>
+        user.user_id
     );
 
   const {
@@ -2013,11 +3587,14 @@ async function updatePresence(
     return;
   }
 
-  const { error } =
+  const {
+    error
+  } =
     await supabaseClient
       .from("user_presence")
       .upsert({
-        user_id: state.user.id,
+        user_id:
+          state.user.id,
         status,
         last_seen_at:
           new Date().toISOString()
@@ -2260,12 +3837,9 @@ async function loadLatestScore() {
 
 async function loadHomepageData() {
 
-  /*
-    Update presence first so the current
-    user can appear in Who's Active.
-  */
-
-  await updatePresence("online");
+  await updatePresence(
+    "online"
+  );
 
   await Promise.all([
     loadAcademicSummary(),
@@ -2302,9 +3876,12 @@ async function initializeApp() {
   } =
     await supabaseClient.auth.getSession();
 
-  state.session = session;
+  state.session =
+    session;
+
   state.user =
-    session?.user || null;
+    session?.user ||
+    null;
 
   if (!state.user) {
 
@@ -2335,15 +3912,22 @@ function setupAuthListener() {
   }
 
   supabaseClient.auth.onAuthStateChange(
-    async (_event, session) => {
+    async (
+      _event,
+      session
+    ) => {
 
-      state.session = session;
+      state.session =
+        session;
+
       state.user =
-        session?.user || null;
+        session?.user ||
+        null;
 
       if (!state.user) {
 
-        state.profile = null;
+        state.profile =
+          null;
 
         renderLoginPage();
 
