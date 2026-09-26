@@ -91,7 +91,11 @@ create policy "Members can view conversations"
 on public.conversations for select
 to authenticated
 using (
-  exists (
+  (
+    type = 'group'
+    and name = 'The Care Team'
+  )
+  or exists (
     select 1 from public.conversation_members cm
     where cm.conversation_id = conversations.id
       and cm.user_id = auth.uid()
