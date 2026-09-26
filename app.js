@@ -898,7 +898,17 @@ function getClassProgram(classItem) {
 
 function getClassLabel(classItem) {
   const program = getClassProgram(classItem);
-  return isCnaProgram(program) ? "CNA" : (classItem?.name || "Class");
+
+  // The current StudentHub class is the CNA program.
+  // Keep the visible class selector as "CNA" even if the
+  // existing Supabase class name is something like "Fall 2026".
+  if (isCnaProgram(program)) return "CNA";
+
+  if (state.classes.length === 1 && classItem?.id === state.classes[0]?.id) {
+    return "CNA";
+  }
+
+  return classItem?.name || "Class";
 }
 
 function getStoredClassId() {
