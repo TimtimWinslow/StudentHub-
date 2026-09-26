@@ -108,13 +108,7 @@ drop policy if exists "Members can view conversation membership" on public.conve
 create policy "Members can view conversation membership"
 on public.conversation_members for select
 to authenticated
-using (
-  exists (
-    select 1 from public.conversation_members own
-    where own.conversation_id = conversation_members.conversation_id
-      and own.user_id = auth.uid()
-  )
-);
+using (true);
 
 drop policy if exists "Users can join conversations" on public.conversation_members;
 create policy "Users can join conversations"
