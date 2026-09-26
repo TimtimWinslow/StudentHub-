@@ -1823,11 +1823,9 @@ function renderTopbar() {
         >
 
           <span class="avatar small-avatar">
-            ${escapeHtml(
-              getInitials(
-                getDisplayName()
-              )
-            )}
+            ${state.profile?.avatar_url
+              ? '<img src="' + escapeHtml(state.profile.avatar_url) + '" alt="" />'
+              : escapeHtml(getInitials(getDisplayName()))}
           </span>
 
           <span class="account-name">
@@ -1936,6 +1934,7 @@ function getPageTitle() {
     "chapter-tracker":
       "Chapter Tracker",
     progress: "Progress",
+    profile: "My Profile",
     account: "Account"
   };
 
@@ -2153,6 +2152,9 @@ function renderPageContent() {
     case "progress":
       return renderProgress();
 
+    case "profile":
+      return renderProfile();
+
     case "account":
       return renderAccount();
 
@@ -2208,6 +2210,10 @@ async function hydratePage(page) {
 
   if (page === "progress") {
     await hydrateProgress();
+  }
+
+  if (page === "profile") {
+    await hydrateProfile();
   }
 
   if (page === "account") {
@@ -6519,6 +6525,228 @@ async function markNotificationRead(
   }
 }
 
+
+/* =========================================================
+   PROFILE PAGE
+   ========================================================= */
+
+function renderProfile() {
+  const profile = state.profile || {};
+  const name = getDisplayName();
+  const avatar = profile.avatar_url || "";
+  const bio = profile.bio || "";
+
+  return \`
+    <section class="page">
+      <div class="page-header profile-page-header">
+        <div>
+          <p class="eyebrow">PROFILE</p>
+          <h1>My Profile</h1>
+          <p>Manage the information your classmates see.</p>
+        </div>
+      </div>
+
+      <div class="profile-page-grid">
+        <section class="panel profile-preview-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-icon">👤</span>
+              <h2>Profile Preview</h2>
+            </div>
+          </div>
+
+          <div class="profile-preview">
+            <div class="profile-preview-avatar">
+              \${avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Profile picture" />' : escapeHtml(getInitials(name))}
+            </div>
+            <h2>\${escapeHtml(name)}</h2>
+            <p class="profile-preview-email">\${escapeHtml(state.user?.email || "")}</p>
+            <p class="profile-preview-role">Student</p>
+            <div class="profile-preview-bio">
+              \${bio ? escapeHtml(bio) : "Add a short bio so your classmates can get to know you."}
+            </div>
+          </div>
+        </section>
+
+        <section class="panel profile-edit-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-icon">✏️</span>
+              <h2>Edit Profile</h2>
+            </div>
+          </div>
+
+          <form id="profile-form" class="profile-form">
+            <div class="profile-photo-editor">
+              <div class="profile-form-avatar" id="profile-form-avatar">
+                \${avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Current profile picture" />' : escapeHtml(getInitials(name))}
+              </div>
+              <div>
+                <strong>Profile picture</strong>
+                <p>JPG, PNG, or WebP. Maximum 5 MB.</p>
+                <label class="secondary-button profile-upload-button">
+                  Choose Photo
+                  <input id="profile-avatar" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+                </label>
+              </div>
+            </div>
+
+            <label class="field-label" for="profile-display-name">Display name</label>
+            <input id="profile-display-name" class="text-input" type="text" maxlength="80"
+              value="\${escapeHtml(profile.display_name || name)}"
+              placeholder="How classmates should see you" required />
+
+            <label class="field-label" for="profile-full-name">Full name</label>
+            <input id="profile-full-name" class="text-input" type="text" maxlength="120"
+              value="\${escapeHtml(profile.full_name || state.user?.user_metadata?.full_name || name)}"
+              placeholder="Your full name" />
+
+            <label class="field-label" for="profile-bio">Bio</label>
+            <textarea id="profile-bio" class="text-input profile-bio-input" maxlength="240" rows="4"
+              placeholder="Tell your classmates a little about yourself...">\${escapeHtml(bio)}</textarea>
+
+            <div id="profile-message" class="form-error"></div>
+            <button class="primary-button" type="submit">Save Profile</button>
+          </form>
+        </section>
+      </div>
+    </section>
+  \`;
+}
+
+async function hydrateProfile() {
+  await loadProfile();
+  const container = $("#page-container");
+  if (!container) return;
+
+  container.innerHTML = renderProfile();
+
+  const avatarInput = $("#profile-avatar");
+  avatarInput?.addEventListener("change", () => {
+    const file = avatarInput.files?.[0];
+    const preview = $("#profile-form-avatar");
+    if (!file || !preview) return;
+
+    if (!file.type.startsWith("image/")) {
+      avatarInput.value = "";
+      showMessage("Please choose an image file.", "error");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      avatarInput.value = "";
+      showMessage("Profile pictures must be 5 MB or smaller.", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      preview.innerHTML = '<img src="' + reader.result + '" alt="New profile picture preview" />';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $("#profile-form")?.addEventListener("submit", saveProfile);
+}
+
+async function saveProfile(event) {
+  event.preventDefault();
+
+  const displayName = $("#profile-display-name")?.value.trim();
+  const fullName = $("#profile-full-name")?.value.trim();
+  const bio = $("#profile-bio")?.value.trim() || "";
+  const avatarInput = $("#profile-avatar");
+  const message = $("#profile-message");
+  const button = document.querySelector('#profile-form button[type="submit"]');
+
+  if (message) {
+    message.className = "form-error";
+    message.textContent = "";
+  }
+
+  if (!displayName) {
+    if (message) message.textContent = "Display name is required.";
+    return;
+  }
+
+  if (!state.user || !supabaseClient) return;
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Saving...";
+  }
+
+  try {
+    let avatarUrl = state.profile?.avatar_url || null;
+    const file = avatarInput?.files?.[0];
+
+    if (file) {
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const safeExtension = ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "jpg";
+      const path = state.user.id + "/profile-" + Date.now() + "." + safeExtension;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from("avatars")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabaseClient.storage
+        .from("avatars")
+        .getPublicUrl(path);
+
+      avatarUrl = publicData?.publicUrl || avatarUrl;
+    }
+
+    const profilePayload = {
+      id: state.user.id,
+      display_name: displayName,
+      full_name: fullName || displayName,
+      bio,
+      avatar_url: avatarUrl
+    };
+
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .upsert(profilePayload, { onConflict: "id" })
+      .select("*")
+      .single();
+
+    if (error) throw error;
+
+    state.profile = data;
+
+    await supabaseClient.auth.updateUser({
+      data: {
+        display_name: displayName,
+        full_name: fullName || displayName
+      }
+    });
+
+    showMessage("Profile saved successfully.");
+    avatarInput.value = "";
+    renderAppShell();
+    await hydrateProfile();
+  } catch (error) {
+    console.error("Profile save error:", error);
+
+    if (message) {
+      message.className = "form-error";
+      message.textContent = error?.message || "Unable to save your profile.";
+    }
+  } finally {
+    const currentButton = document.querySelector('#profile-form button[type="submit"]');
+    if (currentButton) {
+      currentButton.disabled = false;
+      currentButton.textContent = "Save Profile";
+    }
+  }
+}
+
 /* =========================================================
    ACCOUNT
    ========================================================= */
@@ -6568,11 +6796,9 @@ function renderAccount() {
           <div class="profile-card">
 
             <div class="large-avatar">
-              ${escapeHtml(
-                getInitials(
-                  getDisplayName()
-                )
-              )}
+              ${state.profile?.avatar_url
+                ? '<img src="' + escapeHtml(state.profile.avatar_url) + '" alt="" />'
+                : escapeHtml(getInitials(getDisplayName()))}
             </div>
 
             <div>
@@ -6704,6 +6930,9 @@ async function handleAccountAction(
 
   switch (action) {
     case "profile":
+      await navigate("profile");
+      break;
+
     case "details":
       await navigate("account");
       break;
