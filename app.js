@@ -16,6 +16,7 @@ const SUPABASE_ANON_KEY =
 let supabaseClient = null;
 
 let presenceHeartbeat = null;
+let activeUsersRefreshTimer = null;
 let presenceIdleTimer = null;
 let lastPresenceActivity = Date.now();
 
@@ -7739,6 +7740,18 @@ function markPresenceActivity() {
 function startPresenceLifecycle() {
   if (presenceHeartbeat) clearInterval(presenceHeartbeat);
   if (presenceIdleTimer) clearInterval(presenceIdleTimer);
+  if (activeUsersRefreshTimer) clearInterval(activeUsersRefreshTimer);
+
+  activeUsersRefreshTimer = setInterval(async () => {
+    if (!state.user || state.currentPage !== "home") return;
+
+    await loadActiveUsers();
+
+    const activeUsersContainer = $("#active-users");
+    if (activeUsersContainer) {
+      activeUsersContainer.innerHTML = renderActiveUsers();
+    }
+  }, 15000);
 
   lastPresenceActivity = Date.now();
   updatePresence(document.hidden ? "idle" : "online");
@@ -7780,6 +7793,7 @@ window.addEventListener(
     if (state.user) updatePresence("offline");
     if (presenceHeartbeat) clearInterval(presenceHeartbeat);
     if (presenceIdleTimer) clearInterval(presenceIdleTimer);
+    if (activeUsersRefreshTimer) clearInterval(activeUsersRefreshTimer);
   }
 );
 
