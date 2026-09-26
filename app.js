@@ -880,15 +880,84 @@ async function loadProfile() {
    CLASSES
    ========================================================= */
 
+function isCnaProgram(value) {
+  return /\bcna\b/i.test(String(value || ""));
+}
+
+function getClassProgram(classItem) {
+  if (!classItem) return "";
+  return (
+    classItem.program ||
+    classItem.program_name ||
+    classItem.course ||
+    classItem.course_name ||
+    classItem.name ||
+    ""
+  );
+}
+
+function getClassLabel(classItem) {
+  const program = getClassProgram(classItem);
+  return isCnaProgram(program) ? "CNA" : (classItem?.name || "Class");
+}
+
+function getStoredClassId() {
+  try {
+    return localStorage.getItem("studenthub-current-class-id");
+  } catch {
+    return null;
+  }
+}
+
+function storeCurrentClassId(classId) {
+  try {
+    if (classId) localStorage.setItem("studenthub-current-class-id", String(classId));
+  } catch {}
+}
+
+function getCurrentClass() {
+  if (!state.classes.length) return null;
+  return state.classes.find((item) => String(item.id) === String(state.currentClassId)) || state.classes[0];
+}
+
+function getChaptersForClass(classItem = getCurrentClass()) {
+  if (!classItem) return [];
+
+  const program = getClassProgram(classItem);
+  const classId = String(classItem.id || "");
+
+  return state.chapters.filter((chapter) => {
+    const chapterClassId = chapter.class_id ?? chapter.classId ?? null;
+    const chapterProgram =
+      chapter.program ||
+      chapter.program_name ||
+      chapter.course ||
+      chapter.course_name ||
+      null;
+
+    // Existing chapters are the CNA curriculum.
+    if (isCnaProgram(program)) {
+      if (chapterClassId && String(chapterClassId) === classId) return true;
+      if (chapterProgram) return isCnaProgram(chapterProgram);
+      return true;
+    }
+
+    // Future programs can use class/program metadata when present.
+    if (chapterClassId) return String(chapterClassId) === classId;
+    if (chapterProgram) {
+      return String(chapterProgram).toLowerCase() === String(program).toLowerCase();
+    }
+
+    return false;
+  });
+}
+
 async function loadClasses() {
   if (!supabaseClient || !state.user) return [];
 
-  const {
-    data,
-    error
-  } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from("enrollments")
-    .select(`
+    .select(\`
       id,
       student_id,
       class_id,
@@ -901,23 +970,30 @@ async function loadClasses() {
         created_by,
         created_at
       )
-    `)
+    \`)
     .eq("student_id", state.user.id);
 
   if (error) {
     console.error("Class load error:", error);
     state.classes = [];
+    state.currentClassId = null;
     return [];
   }
 
-  state.classes = (data || [])
-    .map((item) => item.classes)
-    .filter(Boolean);
+  state.classes = (data || []).map((item) => item.classes).filter(Boolean);
 
-  if (!state.currentClassId && state.classes.length) {
-    state.currentClassId = state.classes[0].id;
+  const storedClassId = getStoredClassId();
+
+  if (storedClassId && state.classes.some((item) => String(item.id) === String(storedClassId))) {
+    state.currentClassId = storedClassId;
+  } else if (
+    !state.currentClassId ||
+    !state.classes.some((item) => String(item.id) === String(state.currentClassId))
+  ) {
+    state.currentClassId = state.classes[0]?.id || null;
   }
 
+  storeCurrentClassId(state.currentClassId);
   return state.classes;
 }
 
@@ -5572,9 +5648,7 @@ function renderChapterTracker() {
                           : ""
                       }
                     >
-                      ${escapeHtml(
-                        classItem.name
-                      )}
+                      ${getClassLabel(classItem)}
                     </option>
                   `
                 )
@@ -5591,32 +5665,7 @@ function renderChapterTracker() {
               class="text-input"
               required
             >
-
-              <option value="">
-                Select a chapter
-              </option>
-
-              ${state.chapters
-                .map(
-                  (chapter) => `
-                    <option
-                      value="${escapeHtml(
-                        chapter.id
-                      )}"
-                    >
-                      Chapter
-                      ${escapeHtml(
-                        chapter.chapter_number
-                      )}
-                      —
-                      ${escapeHtml(
-                        chapter.title
-                      )}
-                    </option>
-                  `
-                )
-                .join("")}
-
+              __RENDER_CHAPTER_OPTIONS__
             </select>
 
             <label class="field-label">
@@ -5797,29 +5846,56 @@ function renderScoreList() {
   `;
 }
 
-function attachChapterTrackerEvents() {
-  const form =
-    $("#score-form");
 
-  if (!form) return;
+function renderChapterOptions() {
+  const currentClass = getCurrentClass();
+  const chapters = getChaptersForClass(currentClass);
 
-  const dateInput =
-    $("#score-date");
-
-  if (
-    dateInput &&
-    !dateInput.value
-  ) {
-    dateInput.value =
-      new Date()
-        .toISOString()
-        .split("T")[0];
+  if (!currentClass) {
+    return '<option value="">No class assigned</option>';
   }
 
-  form.addEventListener(
-    "submit",
-    handleScoreSubmit
-  );
+  if (!chapters.length) {
+    return '<option value="">No chapters available for ' +
+      escapeHtml(getClassLabel(currentClass)) +
+      '</option>';
+  }
+
+  return '<option value="">Select a chapter</option>' +
+    chapters.map((chapter) => (
+      '<option value="' + escapeHtml(chapter.id) + '">' +
+        'Chapter ' + escapeHtml(chapter.chapter_number) +
+        ' — ' + escapeHtml(chapter.title) +
+      '</option>'
+    )).join("");
+}
+
+function refreshChapterSelect() {
+  const chapterSelect = $("#score-chapter");
+  if (!chapterSelect) return;
+  chapterSelect.innerHTML = renderChapterOptions();
+}
+
+function attachChapterTrackerEvents() {
+  const form = $("#score-form");
+  if (!form) return;
+
+  const classSelect = $("#score-class");
+
+  classSelect?.addEventListener("change", () => {
+    state.currentClassId = classSelect.value || null;
+    storeCurrentClassId(state.currentClassId);
+    refreshChapterSelect();
+  });
+
+  const dateInput = $("#score-date");
+
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split("T")[0];
+  }
+
+  refreshChapterSelect();
+  form.addEventListener("submit", handleScoreSubmit);
 }
 
 async function handleScoreSubmit(
@@ -6177,7 +6253,7 @@ function renderProgressContent() {
           state.chapters.length
             ? `
               <div class="chapter-progress-list">
-                ${state.chapters
+                ${getChaptersForClass()
                   .map((chapter) => {
                     const matchingScore =
                       state.scoreDetails.find(
