@@ -185,20 +185,21 @@ img {
 
   border-radius: 17px;
 
-  background:
-    linear-gradient(
-      135deg,
-      var(--accent),
-      var(--blue)
-    );
+  overflow: hidden;
+
+  background: #071a2b;
 
   box-shadow:
-    0 10px 30px rgba(0, 166, 166, 0.25);
+    0 10px 30px rgba(25, 118, 210, 0.28);
 
   color: white;
+}
 
-  font-size: 28px;
-  font-weight: 900;
+.auth-logo-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .auth-logo > div:last-child {
@@ -467,20 +468,19 @@ img {
 
   border-radius: 11px;
 
-  background:
-    linear-gradient(
-      135deg,
-      var(--accent),
-      var(--blue)
-    );
+  overflow: hidden;
+
+  background: #071a2b;
 
   box-shadow:
-    0 7px 20px rgba(0, 166, 166, 0.2);
+    0 7px 20px rgba(25, 118, 210, 0.22);
+}
 
-  color: white;
-
-  font-size: 20px;
-  font-weight: 900;
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .brand-icon {
@@ -516,12 +516,16 @@ img {
 }
 
 .brand-text strong {
-  color: var(--text);
+  color: #f5f9fc;
 
   font-size: 18px;
   font-weight: 800;
 
   line-height: 1.1;
+}
+
+.brand-text strong::first-letter {
+  color: #00a6e8;
 }
 
 .brand-text span {
