@@ -58,7 +58,9 @@ const state = {
    ========================================================= */
 
 function escapeHtml(value) {
-  if (value === null || value === undefined) return "";
+  if (value === null || value === undefined) {
+    return "";
+  }
 
   return String(value)
     .replace(/&/g, "&amp;")
@@ -72,8 +74,14 @@ function escapeHtml(value) {
 function getGreeting() {
   const hour = new Date().getHours();
 
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  if (hour < 18) {
+    return "Good afternoon";
+  }
+
   return "Good evening";
 }
 
@@ -84,17 +92,24 @@ function getDisplayName() {
       state.profile.display_name ||
       state.profile.full_name ||
       state.profile.name ||
+      state.user?.user_metadata?.display_name ||
       state.user?.email?.split("@")[0] ||
       "Student"
     );
   }
 
-  return state.user?.email?.split("@")[0] || "Student";
+  return (
+    state.user?.user_metadata?.display_name ||
+    state.user?.email?.split("@")[0] ||
+    "Student"
+  );
 }
 
 
 function getInitials(name) {
-  if (!name) return "S";
+  if (!name) {
+    return "S";
+  }
 
   const parts = String(name)
     .trim()
@@ -102,7 +117,9 @@ function getInitials(name) {
     .filter(Boolean);
 
   if (parts.length === 1) {
-    return parts[0].substring(0, 2).toUpperCase();
+    return parts[0]
+      .substring(0, 2)
+      .toUpperCase();
   }
 
   return (
@@ -112,34 +129,34 @@ function getInitials(name) {
 }
 
 
-function setText(selector, value) {
-  const element = document.querySelector(selector);
-
-  if (element) {
-    element.textContent = value;
-  }
-}
-
-
 function formatDate(dateValue) {
-  if (!dateValue) return "—";
+  if (!dateValue) {
+    return "—";
+  }
 
-  const date = new Date(`${dateValue}T00:00:00`);
+  const date = new Date(
+    `${dateValue}T00:00:00`
+  );
 
   if (Number.isNaN(date.getTime())) {
-    return dateValue;
+    return String(dateValue);
   }
 
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
+  return date.toLocaleDateString(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    }
+  );
 }
 
 
 function formatDateTime(dateValue) {
-  if (!dateValue) return "—";
+  if (!dateValue) {
+    return "—";
+  }
 
   const date = new Date(dateValue);
 
@@ -147,13 +164,16 @@ function formatDateTime(dateValue) {
     return "—";
   }
 
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return date.toLocaleString(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    }
+  );
 }
 
 
@@ -170,16 +190,16 @@ function getLetterGrade(score) {
 
 
 function getGradeClass(score) {
-  const grade = getLetterGrade(score);
-
-  return `grade-${grade.toLowerCase()}`;
+  return `grade-${getLetterGrade(score).toLowerCase()}`;
 }
 
 
 function calculateAverage(scores) {
-  const validScores = scores
-    .map(score => Number(score.score))
-    .filter(score => !Number.isNaN(score));
+  const validScores = (scores || [])
+    .map(item => Number(item.score))
+    .filter(
+      score => !Number.isNaN(score)
+    );
 
   if (!validScores.length) {
     return null;
@@ -194,11 +214,10 @@ function calculateAverage(scores) {
 }
 
 
-function showTrackerMessage(message, type = "success") {
-  state.tracker.message = message;
-  state.tracker.messageType = type;
-
-  renderCurrentPage();
+function getToday() {
+  return new Date()
+    .toISOString()
+    .split("T")[0];
 }
 
 
@@ -208,55 +227,83 @@ function clearTrackerMessage() {
 }
 
 
+function showTrackerMessage(
+  message,
+  type = "success"
+) {
+  state.tracker.message = message;
+  state.tracker.messageType = type;
+
+  renderApp();
+}
+
+
 /* =========================================================
-   LOGIN PAGE
+   LOGIN
    ========================================================= */
 
 function renderLogin() {
   return `
-    <div class="login-page">
-      <div class="login-card">
+    <div class="auth-page">
 
-        <div class="login-logo">
-          <div class="login-logo-icon">✚</div>
-          <div>
-            <h1>StudentHub</h1>
-            <p>Your CNA class hub</p>
-          </div>
+      <div class="auth-card">
+
+        <div class="auth-logo">
+          ✚
         </div>
 
-        <div class="login-header">
-          <h2>Welcome back</h2>
-          <p>Sign in to continue to StudentHub.</p>
-        </div>
+        <h1>StudentHub</h1>
 
-        <form id="login-form">
+        <p class="auth-subtitle">
+          Your CNA class hub.
+          Sign in to continue.
+        </p>
+
+        <form
+          id="login-form"
+          class="auth-form"
+        >
 
           <div class="form-group">
-            <label for="login-email">Email</label>
+
+            <label for="login-email">
+              Email
+            </label>
+
             <input
               id="login-email"
               type="email"
               placeholder="you@example.com"
+              autocomplete="email"
               required
             />
+
           </div>
 
           <div class="form-group">
-            <label for="login-password">Password</label>
+
+            <label for="login-password">
+              Password
+            </label>
+
             <input
               id="login-password"
               type="password"
               placeholder="Enter your password"
+              autocomplete="current-password"
               required
             />
+
           </div>
 
-          <div id="login-message" class="form-message"></div>
+          <div
+            id="login-message"
+            class="auth-message"
+          ></div>
 
           <button
             type="submit"
-            class="primary-button full-width"
+            class="primary-button"
           >
             Sign In
           </button>
@@ -264,7 +311,7 @@ function renderLogin() {
           <button
             type="button"
             id="forgot-password-button"
-            class="text-button"
+            class="secondary-button"
           >
             Forgot password?
           </button>
@@ -272,6 +319,7 @@ function renderLogin() {
         </form>
 
       </div>
+
     </div>
   `;
 }
@@ -280,16 +328,21 @@ function renderLogin() {
 async function handleLogin(event) {
   event.preventDefault();
 
-  const email = document
-    .getElementById("login-email")
-    ?.value
-    .trim();
+  const email =
+    document
+      .getElementById("login-email")
+      ?.value
+      .trim();
 
-  const password = document
-    .getElementById("login-password")
-    ?.value;
+  const password =
+    document
+      .getElementById("login-password")
+      ?.value;
 
-  const message = document.getElementById("login-message");
+  const message =
+    document.getElementById(
+      "login-message"
+    );
 
   if (!email || !password) {
     if (message) {
@@ -301,17 +354,22 @@ async function handleLogin(event) {
   }
 
   if (message) {
-    message.textContent = "Signing in...";
+    message.textContent =
+      "Signing in...";
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
+  const {
+    error
+  } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
   if (error) {
     if (message) {
-      message.textContent = error.message;
+      message.textContent =
+        error.message;
     }
 
     return;
@@ -320,12 +378,16 @@ async function handleLogin(event) {
 
 
 async function handleForgotPassword() {
-  const email = document
-    .getElementById("login-email")
-    ?.value
-    .trim();
+  const email =
+    document
+      .getElementById("login-email")
+      ?.value
+      .trim();
 
-  const message = document.getElementById("login-message");
+  const message =
+    document.getElementById(
+      "login-message"
+    );
 
   if (!email) {
     if (message) {
@@ -341,14 +403,21 @@ async function handleForgotPassword() {
       "Sending password reset email...";
   }
 
-  const { error } =
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin
-    });
+  const {
+    error
+  } =
+    await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo:
+          window.location.origin
+      }
+    );
 
   if (error) {
     if (message) {
-      message.textContent = error.message;
+      message.textContent =
+        error.message;
     }
 
     return;
@@ -361,273 +430,408 @@ async function handleForgotPassword() {
 }
 
 
+function attachLoginListeners() {
+  document
+    .getElementById("login-form")
+    ?.addEventListener(
+      "submit",
+      handleLogin
+    );
+
+  document
+    .getElementById(
+      "forgot-password-button"
+    )
+    ?.addEventListener(
+      "click",
+      handleForgotPassword
+    );
+}
+
+
 /* =========================================================
    PROFILE
    ========================================================= */
 
 async function loadProfile() {
-  if (!state.user) return;
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", state.user.id)
-    .maybeSingle();
-
-  if (!error) {
-    state.profile = data;
+  if (!state.user) {
+    return;
   }
+
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", state.user.id)
+      .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Unable to load profile:",
+      error
+    );
+
+    state.profile = null;
+    return;
+  }
+
+  state.profile = data || null;
 }
 
 
 /* =========================================================
-   APP SHELL
+   SIDEBAR
    ========================================================= */
-
-function renderApp() {
-  document.getElementById("app").innerHTML = `
-    <div class="app-shell">
-
-      ${renderSidebar()}
-
-      <div class="main-area">
-
-        ${renderTopbar()}
-
-        <main
-          id="page-content"
-          class="page-content"
-        >
-          ${renderCurrentPage()}
-        </main>
-
-      </div>
-
-    </div>
-  `;
-
-  attachAppListeners();
-}
-
 
 function renderSidebar() {
   return `
     <aside
       id="sidebar"
       class="sidebar ${
-        state.mobileMenuOpen ? "mobile-open" : ""
+        state.mobileMenuOpen
+          ? "open"
+          : ""
       }"
     >
 
       <div class="sidebar-brand">
-        <div class="brand-icon">✚</div>
+
+        <div class="brand-icon">
+          ✚
+        </div>
 
         <div>
-          <div class="brand-name">StudentHub</div>
-          <div class="brand-subtitle">CNA Class Hub</div>
+          <div class="brand-text">
+            StudentHub
+          </div>
+
+          <div
+            style="
+              color: var(--text-muted);
+              font-size: 11px;
+              margin-top: 2px;
+            "
+          >
+            CNA Class Hub
+          </div>
         </div>
+
       </div>
 
-      <nav class="sidebar-nav">
 
-        <button
-          class="nav-item ${
-            state.currentPage === "home" ? "active" : ""
-          }"
-          data-nav="home"
-        >
-          <span class="nav-icon">🏠</span>
-          <span>Home</span>
-        </button>
+      <div class="sidebar-section">
 
-        <button
-          class="nav-item ${
-            state.currentPage === "calendar" ? "active" : ""
-          }"
-          data-nav="calendar"
-        >
-          <span class="nav-icon">📅</span>
-          <span>Calendar</span>
-        </button>
+        <div class="sidebar-section-title">
+          Main
+        </div>
 
-        <button
-          class="nav-item ${
-            state.currentPage === "care-team" ? "active" : ""
-          }"
-          data-nav="care-team"
-        >
-          <span class="nav-icon">💬</span>
-          <span>The Care Team</span>
-        </button>
+        <nav class="sidebar-nav">
 
-        <button
-          class="nav-item study-tools-toggle"
-          id="study-tools-toggle"
-        >
-          <span class="nav-icon">📚</span>
-          <span>Study Tools</span>
-          <span class="nav-chevron">
-            ${state.studyToolsOpen ? "▾" : "▸"}
-          </span>
-        </button>
+          <button
+            class="nav-item ${
+              state.currentPage === "home"
+                ? "active"
+                : ""
+            }"
+            data-nav="home"
+          >
+            <span class="nav-icon">
+              🏠
+            </span>
 
-        ${
-          state.studyToolsOpen
-            ? `
-              <div class="submenu">
+            <span>
+              Home
+            </span>
+          </button>
 
-                <button
-                  class="submenu-item ${
-                    state.currentPage === "flashcards"
-                      ? "active"
-                      : ""
-                  }"
-                  data-nav="flashcards"
-                >
-                  🧠 Flashcards
-                </button>
 
-                <button
-                  class="submenu-item ${
-                    state.currentPage === "quiz-maker"
-                      ? "active"
-                      : ""
-                  }"
-                  data-nav="quiz-maker"
-                >
-                  📝 Quiz Maker
-                </button>
+          <button
+            class="nav-item ${
+              state.currentPage === "calendar"
+                ? "active"
+                : ""
+            }"
+            data-nav="calendar"
+          >
+            <span class="nav-icon">
+              📅
+            </span>
 
-                <button
-                  class="submenu-item ${
-                    state.currentPage === "study-timer"
-                      ? "active"
-                      : ""
-                  }"
-                  data-nav="study-timer"
-                >
-                  ⏱️ Study Timer
-                </button>
+            <span>
+              Calendar
+            </span>
+          </button>
 
-                <button
-                  class="submenu-item ${
-                    state.currentPage === "study-checklist"
-                      ? "active"
-                      : ""
-                  }"
-                  data-nav="study-checklist"
-                >
-                  ✅ Study Checklist
-                </button>
 
-                <button
-                  class="submenu-item ${
-                    state.currentPage === "chapter-tracker"
-                      ? "active"
-                      : ""
-                  }"
-                  data-nav="chapter-tracker"
-                >
-                  📖 Chapter Tracker
-                </button>
+          <button
+            class="nav-item ${
+              state.currentPage === "care-team"
+                ? "active"
+                : ""
+            }"
+            data-nav="care-team"
+          >
+            <span class="nav-icon">
+              💬
+            </span>
 
-              </div>
-            `
-            : ""
-        }
+            <span>
+              The Care Team
+            </span>
+          </button>
 
-        <button
-          class="nav-item ${
-            state.currentPage === "progress" ? "active" : ""
-          }"
-          data-nav="progress"
-        >
-          <span class="nav-icon">📈</span>
-          <span>Progress</span>
-        </button>
+        </nav>
 
-      </nav>
+      </div>
 
-      <div class="sidebar-footer">
+
+      <div class="sidebar-section">
+
+        <div class="sidebar-section-title">
+          Study
+        </div>
+
+
+        <nav class="sidebar-nav">
+
+          <button
+            id="study-tools-toggle"
+            class="nav-item study-toggle"
+          >
+
+            <span class="study-toggle-left">
+
+              <span class="nav-icon">
+                📚
+              </span>
+
+              <span>
+                Study Tools
+              </span>
+
+            </span>
+
+            <span
+              class="study-arrow ${
+                state.studyToolsOpen
+                  ? "open"
+                  : ""
+              }"
+            >
+              ▾
+            </span>
+
+          </button>
+
+
+          <div
+            class="study-submenu ${
+              state.studyToolsOpen
+                ? "open"
+                : ""
+            }"
+          >
+
+            <button
+              class="subnav-item ${
+                state.currentPage ===
+                "flashcards"
+                  ? "active"
+                  : ""
+              }"
+              data-nav="flashcards"
+            >
+              🧠 Flashcards
+            </button>
+
+
+            <button
+              class="subnav-item ${
+                state.currentPage ===
+                "quiz-maker"
+                  ? "active"
+                  : ""
+              }"
+              data-nav="quiz-maker"
+            >
+              📝 Quiz Maker
+            </button>
+
+
+            <button
+              class="subnav-item ${
+                state.currentPage ===
+                "study-timer"
+                  ? "active"
+                  : ""
+              }"
+              data-nav="study-timer"
+            >
+              ⏱️ Study Timer
+            </button>
+
+
+            <button
+              class="subnav-item ${
+                state.currentPage ===
+                "study-checklist"
+                  ? "active"
+                  : ""
+              }"
+              data-nav="study-checklist"
+            >
+              ✅ Study Checklist
+            </button>
+
+
+            <button
+              class="subnav-item ${
+                state.currentPage ===
+                "chapter-tracker"
+                  ? "active"
+                  : ""
+              }"
+              data-nav="chapter-tracker"
+            >
+              📖 Chapter Tracker
+            </button>
+
+          </div>
+
+        </nav>
+
+      </div>
+
+
+      <div class="sidebar-section">
+
+        <div class="sidebar-section-title">
+          Academic
+        </div>
+
+        <nav class="sidebar-nav">
+
+          <button
+            class="nav-item ${
+              state.currentPage ===
+              "progress"
+                ? "active"
+                : ""
+            }"
+            data-nav="progress"
+          >
+            <span class="nav-icon">
+              📈
+            </span>
+
+            <span>
+              Progress
+            </span>
+          </button>
+
+        </nav>
+
+      </div>
+
+
+      <div
+        style="
+          margin-top: auto;
+          padding-top: 20px;
+        "
+      >
 
         <button
           class="nav-item"
           data-nav="account"
         >
-          <span class="nav-icon">👤</span>
-          <span>Account</span>
+          <span class="nav-icon">
+            👤
+          </span>
+
+          <span>
+            Account
+          </span>
         </button>
 
       </div>
 
     </aside>
 
+
     ${
       state.mobileMenuOpen
-        ? `<div id="sidebar-overlay" class="sidebar-overlay"></div>`
+        ? `
+          <div
+            id="sidebar-overlay"
+            class="mobile-overlay"
+          ></div>
+        `
         : ""
     }
   `;
 }
 
 
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+
 function renderTopbar() {
   return `
     <header class="topbar">
 
-      <div class="topbar-left">
+      <button
+        id="mobile-menu-button"
+        class="mobile-menu-button"
+        aria-label="Open menu"
+      >
+        ☰
+      </button>
 
-        <button
-          id="mobile-menu-button"
-          class="icon-button mobile-menu-button"
-          aria-label="Open menu"
-        >
-          ☰
-        </button>
 
-        <div class="topbar-title">
-          ${getPageTitle()}
-        </div>
-
+      <div
+        style="
+          font-weight: 700;
+          color: var(--text-secondary);
+        "
+      >
+        ${escapeHtml(getPageTitle())}
       </div>
+
 
       <div class="topbar-actions">
 
+
         <button
-          class="topbar-action"
+          class="topbar-button"
           data-top-action="messages"
           title="Messages"
         >
           💬
-          <span>Messages</span>
         </button>
 
+
         <button
-          class="topbar-action"
+          class="topbar-button"
           data-top-action="notifications"
           title="Notifications"
         >
           🔔
-          <span>Notifications</span>
         </button>
+
 
         <button
           id="account-button"
-          class="topbar-profile"
+          class="topbar-button"
           title="Account"
         >
-          <span class="avatar-small">
-            ${escapeHtml(
-              getInitials(getDisplayName())
-            )}
-          </span>
-
-          <span class="topbar-profile-name">
-            ${escapeHtml(getDisplayName())}
-          </span>
-
-          <span>▾</span>
+          👤
         </button>
+
 
         ${
           state.accountMenuOpen
@@ -646,19 +850,31 @@ function getPageTitle() {
   const titles = {
     home: "Home",
     calendar: "Calendar",
-    "care-team": "The Care Team",
+    "care-team":
+      "The Care Team",
     flashcards: "Flashcards",
-    "quiz-maker": "Quiz Maker",
-    "study-timer": "Study Timer",
-    "study-checklist": "Study Checklist",
-    "chapter-tracker": "Chapter Tracker",
+    "quiz-maker":
+      "Quiz Maker",
+    "study-timer":
+      "Study Timer",
+    "study-checklist":
+      "Study Checklist",
+    "chapter-tracker":
+      "Chapter Tracker",
     progress: "Progress",
     account: "Account"
   };
 
-  return titles[state.currentPage] || "StudentHub";
+  return (
+    titles[state.currentPage] ||
+    "StudentHub"
+  );
 }
 
+
+/* =========================================================
+   ACCOUNT MENU
+   ========================================================= */
 
 function renderAccountMenu() {
   return `
@@ -667,54 +883,111 @@ function renderAccountMenu() {
       class="account-menu"
     >
 
-      <div class="account-menu-header">
-        <div class="avatar-large">
+      <div
+        style="
+          padding: 12px;
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        "
+      >
+
+        <div class="avatar">
           ${escapeHtml(
-            getInitials(getDisplayName())
+            getInitials(
+              getDisplayName()
+            )
           )}
         </div>
 
-        <div>
+        <div
+          style="
+            min-width: 0;
+          "
+        >
+
           <strong>
-            ${escapeHtml(getDisplayName())}
+            ${escapeHtml(
+              getDisplayName()
+            )}
           </strong>
 
-          <small>
-            ${escapeHtml(state.user?.email || "")}
-          </small>
+          <div
+            style="
+              color: var(--text-muted);
+              font-size: 12px;
+              margin-top: 3px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            "
+          >
+            ${escapeHtml(
+              state.user?.email || ""
+            )}
+          </div>
+
         </div>
+
       </div>
+
 
       <div class="account-menu-divider"></div>
 
-      <button data-account-action="profile">
+
+      <button
+        class="account-menu-item"
+        data-account-action="profile"
+      >
         👤 My Profile
       </button>
 
-      <button data-account-action="details">
+
+      <button
+        class="account-menu-item"
+        data-account-action="details"
+      >
         ⚙️ Account Details
       </button>
 
-      <button data-account-action="security">
+
+      <button
+        class="account-menu-item"
+        data-account-action="security"
+      >
         🔐 Password & Security
       </button>
 
-      <button data-account-action="privacy">
+
+      <button
+        class="account-menu-item"
+        data-account-action="privacy"
+      >
         🔒 Privacy
       </button>
 
-      <button data-account-action="appearance">
+
+      <button
+        class="account-menu-item"
+        data-account-action="appearance"
+      >
         🎨 Appearance
       </button>
 
-      <button data-account-action="export">
+
+      <button
+        class="account-menu-item"
+        data-account-action="export"
+      >
         📦 Export My Data
       </button>
 
+
       <div class="account-menu-divider"></div>
 
+
       <button
-        class="danger-menu-item"
+        class="account-menu-item"
+        style="color: var(--danger);"
         data-account-action="signout"
       >
         🚪 Sign Out
@@ -722,6 +995,40 @@ function renderAccountMenu() {
 
     </div>
   `;
+}
+
+
+/* =========================================================
+   APP SHELL
+   ========================================================= */
+
+function renderApp() {
+  const app =
+    document.getElementById("app");
+
+  if (!app) {
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="app-shell">
+
+      ${renderSidebar()}
+
+      <div class="main-area">
+
+        ${renderTopbar()}
+
+        <main class="page">
+          ${renderCurrentPage()}
+        </main>
+
+      </div>
+
+    </div>
+  `;
+
+  attachAppListeners();
 }
 
 
@@ -800,25 +1107,44 @@ function renderCurrentPage() {
 }
 
 
-function renderComingSoon(icon, title, description) {
+function renderComingSoon(
+  icon,
+  title,
+  description
+) {
   return `
-    <section class="page-section">
+    <section class="page">
 
-      <div class="panel empty-state-panel">
+      <div class="panel">
 
-        <div class="panel-body empty-state">
+        <div class="panel-body">
 
-          <div class="empty-state-icon">
-            ${icon}
+          <div class="empty-state">
+
+            <div
+              style="
+                font-size: 40px;
+                margin-bottom: 10px;
+              "
+            >
+              ${icon}
+            </div>
+
+            <h2>
+              ${escapeHtml(title)}
+            </h2>
+
+            <p
+              style="
+                margin-top: 8px;
+              "
+            >
+              ${escapeHtml(
+                description
+              )}
+            </p>
+
           </div>
-
-          <h2>${escapeHtml(title)}</h2>
-
-          <p>${escapeHtml(description)}</p>
-
-          <span class="status-badge">
-            Coming next
-          </span>
 
         </div>
 
@@ -835,40 +1161,88 @@ function renderComingSoon(icon, title, description) {
 
 function renderHome() {
   return `
-    <section class="page-section">
+    <section>
 
-      <div class="page-header">
+      <div class="welcome-section">
 
-        <div>
-          <div class="eyebrow">
-            STUDENTHUB
-          </div>
+        <h1>
+          ${escapeHtml(
+            getGreeting()
+          )},
+          ${escapeHtml(
+            getDisplayName()
+          )} 👋
+        </h1>
 
-          <h1>
-            ${escapeHtml(getGreeting())},
-            ${escapeHtml(getDisplayName())} 👋
-          </h1>
-
-          <p>
-            Your CNA class. Your progress. Your community.
-          </p>
-        </div>
+        <p>
+          Your CNA class. Your progress. Your community.
+        </p>
 
       </div>
 
+
       <div class="home-grid">
 
-        <div class="home-left">
+        <div class="panel">
 
-          ${renderStatusPanel()}
+          <div class="panel-header">
 
-          ${renderFeedPanel()}
+            <h2>
+              📊 Status Report
+            </h2>
+
+            <button
+              class="small-button"
+              data-nav="chapter-tracker"
+            >
+              View Tracker
+            </button>
+
+          </div>
+
+          <div class="panel-body">
+
+            ${renderStatusPanel()}
+
+          </div>
 
         </div>
 
-        <div class="home-right">
 
-          ${renderActivePanel()}
+        <div class="panel">
+
+          <div class="panel-header">
+
+            <h2>
+              📰 Main Feed
+            </h2>
+
+          </div>
+
+          <div class="panel-body">
+
+            ${renderFeedPanel()}
+
+          </div>
+
+        </div>
+
+
+        <div class="panel active-panel">
+
+          <div class="panel-header">
+
+            <h2>
+              🟢 Who's Active
+            </h2>
+
+          </div>
+
+          <div class="panel-body">
+
+            ${renderActivePanel()}
+
+          </div>
 
         </div>
 
@@ -884,95 +1258,128 @@ function renderHome() {
    ========================================================= */
 
 function renderStatusPanel() {
-  const summary = state.academicSummary;
+  const summary =
+    state.academicSummary;
 
   const average =
-    summary?.overall_average !== null &&
-    summary?.overall_average !== undefined
-      ? `${Number(summary.overall_average).toFixed(2)}%`
+    summary?.overall_average !==
+      null &&
+    summary?.overall_average !==
+      undefined
+      ? `${Number(
+          summary.overall_average
+        ).toFixed(2)}%`
       : "—";
+
 
   const gpa =
     summary?.gpa !== null &&
     summary?.gpa !== undefined
-      ? Number(summary.gpa).toFixed(2)
+      ? Number(
+          summary.gpa
+        ).toFixed(2)
       : "—";
 
+
   const letter =
-    summary?.overall_letter_grade || "—";
+    summary?.overall_letter_grade ||
+    "—";
+
 
   const tests =
     summary?.total_tests ??
     summary?.tests_completed ??
     0;
 
+
   const consistency =
-    summary?.score_consistency !== null &&
-    summary?.score_consistency !== undefined
-      ? Number(summary.score_consistency).toFixed(2)
+    summary?.score_consistency !==
+      null &&
+    summary?.score_consistency !==
+      undefined
+      ? Number(
+          summary.score_consistency
+        ).toFixed(2)
       : "—";
 
+
+  const latest =
+    state.latestScore?.score;
+
+
   return `
-    <div class="panel">
+    <div class="status-list">
 
-      <div class="panel-header">
+      <div class="status-item">
+        <span class="status-label">
+          Overall Average
+        </span>
 
-        <div>
-          <h2>📊 Status Report</h2>
-          <p>Your current academic snapshot.</p>
-        </div>
-
-        <button
-          class="small-button"
-          data-nav="chapter-tracker"
-        >
-          View Tracker
-        </button>
-
+        <strong class="status-value">
+          ${average}
+        </strong>
       </div>
 
-      <div class="panel-body">
 
-        <div class="status-grid">
+      <div class="status-item">
+        <span class="status-label">
+          GPA
+        </span>
 
-          <div class="status-item">
-            <span>Overall Average</span>
-            <strong>${average}</strong>
-          </div>
+        <strong class="status-value">
+          ${gpa}
+        </strong>
+      </div>
 
-          <div class="status-item">
-            <span>GPA</span>
-            <strong>${gpa}</strong>
-          </div>
 
-          <div class="status-item">
-            <span>Letter Grade</span>
-            <strong>${letter}</strong>
-          </div>
+      <div class="status-item">
+        <span class="status-label">
+          Letter Grade
+        </span>
 
-          <div class="status-item">
-            <span>Tests Completed</span>
-            <strong>${tests}</strong>
-          </div>
+        <strong class="status-value">
+          ${letter}
+        </strong>
+      </div>
 
-          <div class="status-item">
-            <span>Score Consistency</span>
-            <strong>${consistency}</strong>
-          </div>
 
-          <div class="status-item">
-            <span>Latest Score</span>
-            <strong>
-              ${
-                state.latestScore?.score !== undefined
-                  ? `${state.latestScore.score}%`
-                  : "—"
-              }
-            </strong>
-          </div>
+      <div class="status-item">
+        <span class="status-label">
+          Tests Completed
+        </span>
 
-        </div>
+        <strong class="status-value">
+          ${tests}
+        </strong>
+      </div>
 
+
+      <div class="status-item">
+        <span class="status-label">
+          Score Consistency
+        </span>
+
+        <strong class="status-value">
+          ${consistency}
+        </strong>
+      </div>
+
+
+      <div class="status-item">
+        <span class="status-label">
+          Latest Score
+        </span>
+
+        <strong class="status-value">
+          ${
+            latest !== undefined &&
+            latest !== null
+              ? `${Number(
+                  latest
+                ).toFixed(2)}%`
+              : "—"
+          }
+        </strong>
       </div>
 
     </div>
@@ -981,78 +1388,56 @@ function renderStatusPanel() {
 
 
 /* =========================================================
-   MAIN FEED
+   FEED
    ========================================================= */
 
 function renderFeedPanel() {
   return `
-    <div class="panel">
+    <div>
 
-      <div class="panel-header">
+      <form
+        id="create-post-form"
+        class="feed-composer"
+      >
 
-        <div>
-          <h2>📰 Main Feed</h2>
-          <p>Stay connected with your class.</p>
+        <textarea
+          id="post-content"
+          placeholder="Share something with the class..."
+          rows="3"
+        ></textarea>
+
+
+        <div class="feed-composer-footer">
+
+          <button
+            type="submit"
+            class="small-button"
+          >
+            Post
+          </button>
+
         </div>
 
-      </div>
+      </form>
 
-      <div class="panel-body">
 
-        <form id="create-post-form">
+      <div>
 
-          <div class="feed-compose">
-
-            <div class="avatar-small">
-              ${escapeHtml(
-                getInitials(getDisplayName())
-              )}
-            </div>
-
-            <textarea
-              id="post-content"
-              placeholder="Share something with the class..."
-              rows="3"
-            ></textarea>
-
-          </div>
-
-          <div class="feed-compose-actions">
-
-            <span class="muted-text">
-              Post to The Care Team
-            </span>
-
-            <button
-              type="submit"
-              class="primary-button"
-            >
-              Post
-            </button>
-
-          </div>
-
-        </form>
-
-        <div
-          id="feed-posts"
-          class="feed-posts"
-        >
-          ${
-            state.feedPosts.length
-              ? state.feedPosts
-                  .map(renderFeedPost)
-                  .join("")
-              : `
-                <div class="empty-feed">
-                  <div>📰</div>
-                  <p>
-                    No posts yet. Be the first to say something!
-                  </p>
-                </div>
-              `
-          }
-        </div>
+        ${
+          state.feedPosts.length
+            ? state.feedPosts
+                .map(renderFeedPost)
+                .join("")
+            : `
+              <div class="empty-state">
+                📰
+                <br />
+                <br />
+                No posts yet.
+                Be the first to say something!
+              </div>
+            `
+        }
 
       </div>
 
@@ -1062,79 +1447,103 @@ function renderFeedPanel() {
 
 
 function renderFeedPost(post) {
-  const profile = post.profile || {};
+  const profile =
+    post.profile || {};
 
   const name =
     profile.display_name ||
     profile.full_name ||
+    profile.name ||
     "Student";
+
 
   const reactions =
     post.feed_reactions || [];
 
-  const heartCount = reactions.filter(
-    reaction =>
-      reaction.reaction === "heart"
-  ).length;
+
+  const heartCount =
+    reactions.filter(
+      reaction =>
+        reaction.reaction ===
+        "heart"
+    ).length;
+
 
   const currentUserReacted =
     reactions.some(
       reaction =>
-        reaction.user_id === state.user?.id &&
-        reaction.reaction === "heart"
+        reaction.user_id ===
+          state.user?.id &&
+        reaction.reaction ===
+          "heart"
     );
 
+
   return `
-    <article
-      class="feed-post"
-      data-post-id="${post.id}"
-    >
+    <article class="feed-post">
 
-      <div class="feed-post-header">
+      <div class="post-header">
 
-        <div class="avatar-small">
-          ${escapeHtml(getInitials(name))}
+        <div class="avatar">
+          ${escapeHtml(
+            getInitials(name)
+          )}
         </div>
 
-        <div class="feed-post-author">
 
-          <strong>
+        <div>
+
+          <div class="post-user">
             ${escapeHtml(name)}
-          </strong>
+          </div>
 
-          <span>
-            ${formatDateTime(post.created_at)}
-          </span>
+          <div class="post-time">
+            ${formatDateTime(
+              post.created_at
+            )}
+          </div>
 
         </div>
 
-        ${
-          post.pinned
-            ? `<span class="status-badge">📌 Pinned</span>`
-            : ""
-        }
-
       </div>
 
-      <div class="feed-post-content">
-        ${escapeHtml(post.content)}
+
+      <div class="post-content">
+        ${escapeHtml(
+          post.content
+        )}
       </div>
 
-      <div class="feed-post-actions">
+
+      <div class="post-actions">
 
         <button
           class="post-action ${
-            currentUserReacted ? "active" : ""
+            currentUserReacted
+              ? "active"
+              : ""
           }"
-          data-react-post="${post.id}"
+          data-react-post="${escapeHtml(
+            post.id
+          )}"
         >
+
           <span class="reaction-heart">
-            ${currentUserReacted ? "❤️" : "♡"}
+            ${
+              currentUserReacted
+                ? "❤️"
+                : "♡"
+            }
           </span>
 
           <span class="reaction-count">
-            ${heartCount || ""}
+            ${
+              heartCount
+                ? heartCount
+                : ""
+            }
           </span>
+
         </button>
 
       </div>
@@ -1150,77 +1559,76 @@ function renderFeedPost(post) {
 
 function renderActivePanel() {
   return `
-    <div class="panel">
+    <div class="active-list">
 
-      <div class="panel-header">
+      ${
+        state.activeUsers.length
+          ? state.activeUsers
+              .map(user => {
 
-        <div>
-          <h2>🟢 Who's Active</h2>
-          <p>Your classmates' current status.</p>
-        </div>
+                const profile =
+                  user.profile ||
+                  {};
 
-      </div>
+                const name =
+                  profile.display_name ||
+                  profile.full_name ||
+                  profile.name ||
+                  "Student";
 
-      <div class="panel-body">
+                const status =
+                  user.status ||
+                  "offline";
 
-        <div class="active-users">
+                return `
+                  <div class="active-user">
 
-          ${
-            state.activeUsers.length
-              ? state.activeUsers
-                  .map(user => {
+                    <div class="avatar">
+                      ${escapeHtml(
+                        getInitials(
+                          name
+                        )
+                      )}
+                    </div>
 
-                    const profile =
-                      user.profile || {};
+                    <div class="active-user-info">
 
-                    const name =
-                      profile.display_name ||
-                      profile.full_name ||
-                      "Student";
-
-                    const status =
-                      user.status || "offline";
-
-                    return `
-                      <div class="active-user">
-
-                        <div class="avatar-small">
-                          ${escapeHtml(
-                            getInitials(name)
-                          )}
-                        </div>
-
-                        <div class="active-user-info">
-
-                          <strong>
-                            ${escapeHtml(name)}
-                          </strong>
-
-                          <span class="presence ${status}">
-                            <span class="presence-dot"></span>
-                            ${escapeHtml(
-                              status.charAt(0).toUpperCase() +
-                              status.slice(1)
-                            )}
-                          </span>
-
-                        </div>
-
+                      <div
+                        class="active-user-name"
+                      >
+                        ${escapeHtml(
+                          name
+                        )}
                       </div>
-                    `;
-                  })
-                  .join("")
-              : `
-                <div class="empty-state-small">
-                  <div>👥</div>
-                  <p>No active classmates yet.</p>
-                </div>
-              `
-          }
 
-        </div>
+                      <div
+                        class="active-user-status"
+                      >
+                        ${escapeHtml(
+                          status
+                        )}
+                      </div>
 
-      </div>
+                    </div>
+
+                    <span
+                      class="status-dot ${escapeHtml(
+                        status
+                      )}"
+                    ></span>
+
+                  </div>
+                `;
+              })
+              .join("")
+          : `
+            <div class="empty-state">
+              👥
+              <br /><br />
+              No active classmates yet.
+            </div>
+          `
+      }
 
     </div>
   `;
@@ -1232,124 +1640,200 @@ function renderActivePanel() {
    ========================================================= */
 
 function renderChapterTracker() {
-  const tracker = state.tracker;
+  const tracker =
+    state.tracker;
 
-  const scores = tracker.scores || [];
-  const chapters = tracker.chapters || [];
+  const scores =
+    tracker.scores || [];
 
-  const average = calculateAverage(scores);
+  const chapters =
+    tracker.chapters || [];
 
-  const completedChapterIds = new Set(
-    scores.map(score => String(score.chapter_id))
-  );
+
+  const average =
+    calculateAverage(scores);
+
+
+  const completedChapterIds =
+    new Set(
+      scores.map(
+        score =>
+          String(
+            score.chapter_id
+          )
+      )
+    );
+
 
   const completedCount =
-    chapters.filter(chapter =>
-      completedChapterIds.has(String(chapter.id))
+    chapters.filter(
+      chapter =>
+        completedChapterIds.has(
+          String(chapter.id)
+        )
     ).length;
 
+
   return `
-    <section class="page-section">
+    <section>
 
       <div class="page-header">
 
-        <div>
-          <div class="eyebrow">
-            STUDY TOOLS
-          </div>
+        <h1>
+          📖 Chapter Tracker
+        </h1>
 
-          <h1>📖 Chapter Tracker</h1>
-
-          <p>
-            Track your chapter test scores and academic progress.
-          </p>
-        </div>
+        <p>
+          Track your chapter test scores
+          and academic progress.
+        </p>
 
       </div>
+
 
       ${
         tracker.message
           ? `
             <div
               class="tracker-message ${
-                tracker.messageType === "error"
+                tracker.messageType ===
+                "error"
                   ? "error"
                   : "success"
               }"
             >
-              ${escapeHtml(tracker.message)}
+              ${escapeHtml(
+                tracker.message
+              )}
             </div>
           `
           : ""
       }
 
-      <div class="tracker-summary-grid">
 
-        <div class="panel tracker-stat-card">
-          <span>Chapters Completed</span>
+      <div
+        class="tracker-summary-grid"
+      >
+
+        <div
+          class="panel tracker-stat-card"
+        >
+          <span>
+            Chapters Completed
+          </span>
+
           <strong>
-            ${completedCount} / ${chapters.length || 0}
+            ${completedCount}
+            /
+            ${chapters.length}
           </strong>
         </div>
 
-        <div class="panel tracker-stat-card">
-          <span>Tests Recorded</span>
-          <strong>${scores.length}</strong>
+
+        <div
+          class="panel tracker-stat-card"
+        >
+          <span>
+            Tests Recorded
+          </span>
+
+          <strong>
+            ${scores.length}
+          </strong>
         </div>
 
-        <div class="panel tracker-stat-card">
-          <span>Current Average</span>
+
+        <div
+          class="panel tracker-stat-card"
+        >
+          <span>
+            Current Average
+          </span>
+
           <strong>
             ${
               average === null
                 ? "—"
-                : `${average.toFixed(2)}%`
+                : `${average.toFixed(
+                    2
+                  )}%`
             }
           </strong>
         </div>
 
       </div>
 
-      <div class="panel">
+
+      <div
+        class="panel"
+        style="margin-bottom: 20px;"
+      >
 
         <div class="panel-header">
 
           <div>
             <h2>
-              ${tracker.editingScoreId
-                ? "✏️ Edit Score"
-                : "➕ Add Chapter Score"}
+              ${
+                tracker.editingScoreId
+                  ? "✏️ Edit Score"
+                  : "➕ Add Chapter Score"
+              }
             </h2>
 
-            <p>
-              Scores are saved to your StudentHub academic record.
+            <p
+              style="
+                color: var(--text-secondary);
+                margin-top: 4px;
+                font-size: 13px;
+              "
+            >
+              Scores are saved to
+              your existing academic record.
             </p>
           </div>
 
         </div>
 
+
         <div class="panel-body">
 
           ${
-            tracker.classes.length === 0
+            tracker.classes.length ===
+            0
               ? `
-                <div class="empty-state-small">
-                  <div>🏫</div>
-                  <h3>No classes found</h3>
-                  <p>
-                    You need to be enrolled in a class before
-                    recording chapter scores.
-                  </p>
+                <div
+                  class="empty-state"
+                >
+                  🏫
+                  <br /><br />
+
+                  <strong>
+                    No classes found
+                  </strong>
+
+                  <br /><br />
+
+                  You need to be enrolled
+                  in a class before
+                  recording scores.
                 </div>
               `
               : `
-                <form id="score-form">
+                <form
+                  id="score-form"
+                >
 
-                  <div class="form-grid">
+                  <div
+                    class="form-grid"
+                  >
 
-                    <div class="form-group">
+                    <div
+                      class="form-group"
+                    >
 
-                      <label for="tracker-class">
+                      <label
+                        for="tracker-class"
+                      >
                         Class
                       </label>
 
@@ -1363,19 +1847,25 @@ function renderChapterTracker() {
                         </option>
 
                         ${tracker.classes
-                          .map(classItem => `
-                            <option
-                              value="${classItem.id}"
-                              ${
-                                tracker.selectedClassId ===
-                                classItem.id
-                                  ? "selected"
-                                  : ""
-                              }
-                            >
-                              ${escapeHtml(classItem.name)}
-                            </option>
-                          `)
+                          .map(
+                            classItem => `
+                              <option
+                                value="${escapeHtml(
+                                  classItem.id
+                                )}"
+                                ${
+                                  tracker.selectedClassId ===
+                                  classItem.id
+                                    ? "selected"
+                                    : ""
+                                }
+                              >
+                                ${escapeHtml(
+                                  classItem.name
+                                )}
+                              </option>
+                            `
+                          )
                           .join("")}
 
                       </select>
@@ -1383,9 +1873,13 @@ function renderChapterTracker() {
                     </div>
 
 
-                    <div class="form-group">
+                    <div
+                      class="form-group"
+                    >
 
-                      <label for="tracker-chapter">
+                      <label
+                        for="tracker-chapter"
+                      >
                         Chapter
                       </label>
 
@@ -1399,20 +1893,24 @@ function renderChapterTracker() {
                         </option>
 
                         ${chapters
-                          .map(chapter => `
-                            <option
-                              value="${chapter.id}"
-                            >
-                              Chapter
-                              ${escapeHtml(
-                                chapter.chapter_number
-                              )}
-                              —
-                              ${escapeHtml(
-                                chapter.title
-                              )}
-                            </option>
-                          `)
+                          .map(
+                            chapter => `
+                              <option
+                                value="${escapeHtml(
+                                  chapter.id
+                                )}"
+                              >
+                                Chapter
+                                ${escapeHtml(
+                                  chapter.chapter_number
+                                )}
+                                —
+                                ${escapeHtml(
+                                  chapter.title
+                                )}
+                              </option>
+                            `
+                          )
                           .join("")}
 
                       </select>
@@ -1420,9 +1918,13 @@ function renderChapterTracker() {
                     </div>
 
 
-                    <div class="form-group">
+                    <div
+                      class="form-group"
+                    >
 
-                      <label for="tracker-score">
+                      <label
+                        for="tracker-score"
+                      >
                         Score
                       </label>
 
@@ -1439,20 +1941,20 @@ function renderChapterTracker() {
                     </div>
 
 
-                    <div class="form-group">
+                    <div
+                      class="form-group"
+                    >
 
-                      <label for="tracker-date">
+                      <label
+                        for="tracker-date"
+                      >
                         Test Date
                       </label>
 
                       <input
                         id="tracker-date"
                         type="date"
-                        value="${
-                          new Date()
-                            .toISOString()
-                            .split("T")[0]
-                        }"
+                        value="${getToday()}"
                         required
                       />
 
@@ -1460,7 +1962,10 @@ function renderChapterTracker() {
 
                   </div>
 
-                  <div class="form-actions">
+
+                  <div
+                    class="form-actions"
+                  >
 
                     <button
                       type="submit"
@@ -1472,6 +1977,7 @@ function renderChapterTracker() {
                           : "Add Score"
                       }
                     </button>
+
 
                     ${
                       tracker.editingScoreId
@@ -1503,35 +2009,49 @@ function renderChapterTracker() {
         <div class="panel-header">
 
           <div>
-            <h2>📚 Chapter Progress</h2>
-            <p>
+
+            <h2>
+              📚 Chapter Progress
+            </h2>
+
+            <p
+              style="
+                color: var(--text-secondary);
+                margin-top: 4px;
+                font-size: 13px;
+              "
+            >
               Your recorded scores by chapter.
             </p>
+
           </div>
 
         </div>
+
 
         <div class="panel-body">
 
           ${
             chapters.length === 0
               ? `
-                <div class="empty-state-small">
-                  <div>📖</div>
-                  <p>
-                    No chapters have been added yet.
-                  </p>
+                <div
+                  class="empty-state"
+                >
+                  📖
+                  <br /><br />
+                  No chapters have been added yet.
                 </div>
               `
               : `
                 <div class="chapter-list">
 
                   ${chapters
-                    .map(chapter =>
-                      renderChapterCard(
-                        chapter,
-                        scores
-                      )
+                    .map(
+                      chapter =>
+                        renderChapterCard(
+                          chapter,
+                          scores
+                        )
                     )
                     .join("")}
 
@@ -1548,29 +2068,45 @@ function renderChapterTracker() {
 }
 
 
-function renderChapterCard(chapter, scores) {
-  const chapterScores = scores
-    .filter(
-      score =>
-        String(score.chapter_id) ===
-        String(chapter.id)
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.test_date) -
-        new Date(a.test_date)
-    );
+function renderChapterCard(
+  chapter,
+  scores
+) {
+  const chapterScores =
+    scores
+      .filter(
+        score =>
+          String(
+            score.chapter_id
+          ) ===
+          String(chapter.id)
+      )
+      .sort(
+        (a, b) =>
+          new Date(
+            b.test_date
+          ) -
+          new Date(
+            a.test_date
+          )
+      );
+
 
   const latest =
-    chapterScores[0] || null;
+    chapterScores[0] ||
+    null;
+
 
   const completed =
     chapterScores.length > 0;
 
+
   return `
     <div class="chapter-card">
 
-      <div class="chapter-card-header">
+      <div
+        class="chapter-card-header"
+      >
 
         <div>
 
@@ -1582,17 +2118,30 @@ function renderChapterCard(chapter, scores) {
           </div>
 
           <h3>
-            ${escapeHtml(chapter.title)}
+            ${escapeHtml(
+              chapter.title
+            )}
           </h3>
 
         </div>
+
 
         <span
           class="status-badge ${
             completed
               ? "completed"
-              : "pending"
+              : ""
           }"
+          style="
+            ${
+              completed
+                ? ""
+                : `
+                  color: var(--text-muted);
+                  background: rgba(168,183,199,0.08);
+                `
+            }
+          "
         >
           ${
             completed
@@ -1609,10 +2158,14 @@ function renderChapterCard(chapter, scores) {
           ? `
             <div class="chapter-latest">
 
-              <div class="chapter-score-main">
+              <div
+                class="chapter-score-main"
+              >
 
                 <strong>
-                  ${Number(latest.score).toFixed(2)}%
+                  ${Number(
+                    latest.score
+                  ).toFixed(2)}%
                 </strong>
 
                 <span
@@ -1620,13 +2173,21 @@ function renderChapterCard(chapter, scores) {
                     latest.score
                   )}"
                 >
-                  ${getLetterGrade(latest.score)}
+                  ${getLetterGrade(
+                    latest.score
+                  )}
                 </span>
 
               </div>
 
-              <div class="chapter-test-date">
-                Tested ${formatDate(latest.test_date)}
+
+              <div
+                class="chapter-test-date"
+              >
+                Tested
+                ${formatDate(
+                  latest.test_date
+                )}
               </div>
 
             </div>
@@ -1642,61 +2203,83 @@ function renderChapterCard(chapter, scores) {
       ${
         chapterScores.length
           ? `
-            <div class="score-history">
+            <div
+              class="score-history"
+            >
 
-              <div class="score-history-title">
+              <div
+                class="score-history-title"
+              >
                 Score History
               </div>
 
+
               ${chapterScores
-                .map(score => `
-                  <div
-                    class="score-history-row"
-                    data-score-row="${score.id}"
-                  >
+                .map(
+                  score => `
+                    <div
+                      class="score-history-row"
+                    >
 
-                    <div class="score-history-info">
-
-                      <strong>
-                        ${Number(score.score).toFixed(2)}%
-                      </strong>
-
-                      <span
-                        class="grade-pill ${getGradeClass(
-                          score.score
-                        )}"
+                      <div
+                        class="score-history-info"
                       >
-                        ${getLetterGrade(score.score)}
-                      </span>
 
-                      <span>
-                        ${formatDate(
-                          score.test_date
-                        )}
-                      </span>
+                        <strong>
+                          ${Number(
+                            score.score
+                          ).toFixed(2)}%
+                        </strong>
+
+                        <span
+                          class="grade-pill ${getGradeClass(
+                            score.score
+                          )}"
+                        >
+                          ${getLetterGrade(
+                            score.score
+                          )}
+                        </span>
+
+                        <span>
+                          ${formatDate(
+                            score.test_date
+                          )}
+                        </span>
+
+                      </div>
+
+
+                      <div
+                        class="score-history-actions"
+                      >
+
+                        <button
+                          type="button"
+                          class="small-button"
+                          data-edit-score="${escapeHtml(
+                            score.id
+                          )}"
+                        >
+                          Edit
+                        </button>
+
+
+                        <button
+                          type="button"
+                          class="small-button danger-button"
+                          data-delete-score="${escapeHtml(
+                            score.id
+                          )}"
+                        >
+                          Delete
+                        </button>
+
+                      </div>
 
                     </div>
-
-                    <div class="score-history-actions">
-
-                      <button
-                        class="small-button"
-                        data-edit-score="${score.id}"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        class="small-button danger-button"
-                        data-delete-score="${score.id}"
-                      >
-                        Delete
-                      </button>
-
-                    </div>
-
-                  </div>
-                `)
+                  `
+                )
                 .join("")}
 
             </div>
@@ -1710,17 +2293,28 @@ function renderChapterCard(chapter, scores) {
 
 
 /* =========================================================
-   CHAPTER TRACKER DATA
+   TRACKER DATA
    ========================================================= */
 
 async function loadTrackerClasses() {
-  if (!state.user) return;
+  if (!state.user) {
+    return;
+  }
 
-  const { data: enrollments, error } =
+  const {
+    data: enrollments,
+    error
+  } =
     await supabase
       .from("enrollments")
-      .select("class_id, role")
-      .eq("student_id", state.user.id);
+      .select(
+        "class_id, role"
+      )
+      .eq(
+        "student_id",
+        state.user.id
+      );
+
 
   if (error) {
     console.error(
@@ -1732,25 +2326,42 @@ async function loadTrackerClasses() {
     return;
   }
 
+
   const classIds = [
     ...new Set(
       (enrollments || [])
-        .map(row => row.class_id)
+        .map(
+          row =>
+            row.class_id
+        )
         .filter(Boolean)
     )
   ];
+
 
   if (!classIds.length) {
     state.tracker.classes = [];
     return;
   }
 
-  const { data: classes, error: classError } =
+
+  const {
+    data: classes,
+    error: classError
+  } =
     await supabase
       .from("classes")
-      .select("id, name, invite_code")
-      .in("id", classIds)
-      .order("name");
+      .select(
+        "id, name, invite_code"
+      )
+      .in(
+        "id",
+        classIds
+      )
+      .order(
+        "name"
+      );
+
 
   if (classError) {
     console.error(
@@ -1762,7 +2373,10 @@ async function loadTrackerClasses() {
     return;
   }
 
-  state.tracker.classes = classes || [];
+
+  state.tracker.classes =
+    classes || [];
+
 
   if (
     !state.tracker.selectedClassId &&
@@ -1775,13 +2389,22 @@ async function loadTrackerClasses() {
 
 
 async function loadTrackerChapters() {
-  const { data, error } =
+  const {
+    data,
+    error
+  } =
     await supabase
       .from("chapters")
-      .select("*")
-      .order("chapter_number", {
-        ascending: true
-      });
+      .select(
+        "id, chapter_number, title"
+      )
+      .order(
+        "chapter_number",
+        {
+          ascending: true
+        }
+      );
+
 
   if (error) {
     console.error(
@@ -1793,33 +2416,54 @@ async function loadTrackerChapters() {
     return;
   }
 
-  state.tracker.chapters = data || [];
+
+  state.tracker.chapters =
+    data || [];
 }
 
 
 async function loadTrackerScores() {
-  if (!state.user) return;
+  if (!state.user) {
+    return;
+  }
 
-  if (!state.tracker.selectedClassId) {
+
+  if (
+    !state.tracker.selectedClassId
+  ) {
     state.tracker.scores = [];
     return;
   }
 
-  const { data, error } =
+
+  const {
+    data,
+    error
+  } =
     await supabase
       .from("scores")
       .select("*")
-      .eq("user_id", state.user.id)
+      .eq(
+        "user_id",
+        state.user.id
+      )
       .eq(
         "class_id",
         state.tracker.selectedClassId
       )
-      .order("test_date", {
-        ascending: false
-      })
-      .order("created_at", {
-        ascending: false
-      });
+      .order(
+        "test_date",
+        {
+          ascending: false
+        }
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      );
+
 
   if (error) {
     console.error(
@@ -1831,7 +2475,9 @@ async function loadTrackerScores() {
     return;
   }
 
-  state.tracker.scores = data || [];
+
+  state.tracker.scores =
+    data || [];
 }
 
 
@@ -1839,12 +2485,14 @@ async function loadChapterTracker() {
   state.tracker.loading = true;
 
   await loadTrackerClasses();
+
   await loadTrackerChapters();
+
   await loadTrackerScores();
 
   state.tracker.loading = false;
 
-  renderCurrentPage();
+  renderApp();
 }
 
 
@@ -1855,1023 +2503,23 @@ async function loadChapterTracker() {
 async function handleScoreSubmit(event) {
   event.preventDefault();
 
+
   const classId =
-    document.getElementById("tracker-class")?.value;
+    document.getElementById(
+      "tracker-class"
+    )?.value;
+
 
   const chapterId =
-    document.getElementById("tracker-chapter")?.value;
+    document.getElementById(
+      "tracker-chapter"
+    )?.value;
+
 
   const scoreValue =
-    document.getElementById("tracker-score")?.value;
-
-  const testDate =
-    document.getElementById("tracker-date")?.value;
-
-  if (!classId || !chapterId || !scoreValue || !testDate) {
-    showTrackerMessage(
-      "Please complete all score fields.",
-      "error"
-    );
-
-    return;
-  }
-
-  const numericScore = Number(scoreValue);
-
-  if (
-    Number.isNaN(numericScore) ||
-    numericScore < 0 ||
-    numericScore > 100
-  ) {
-    showTrackerMessage(
-      "Score must be between 0 and 100.",
-      "error"
-    );
-
-    return;
-  }
-
-  state.tracker.selectedClassId = classId;
-
-  let result;
-
-  if (state.tracker.editingScoreId) {
-
-    result = await supabase
-      .from("scores")
-      .update({
-        class_id: classId,
-        chapter_id: Number(chapterId),
-        score: numericScore,
-        test_date: testDate,
-        updated_at: new Date().toISOString()
-      })
-      .eq(
-        "id",
-        state.tracker.editingScoreId
-      )
-      .eq(
-        "user_id",
-        state.user.id
-      );
-
-  } else {
-
-    result = await supabase
-      .from("scores")
-      .insert({
-        user_id: state.user.id,
-        class_id: classId,
-        chapter_id: Number(chapterId),
-        score: numericScore,
-        test_date: testDate
-      });
-
-  }
-
-  if (result.error) {
-    console.error(
-      "Score save error:",
-      result.error
-    );
-
-    showTrackerMessage(
-      result.error.message ||
-        "Unable to save score.",
-      "error"
-    );
-
-    return;
-  }
-
-  state.tracker.editingScoreId = null;
-
-  state.tracker.message =
-    state.tracker.editingScoreId
-      ? "Score updated successfully."
-      : "Score saved successfully.";
-
-  state.tracker.messageType = "success";
-
-  await loadTrackerScores();
-
-  await refreshAcademicData();
-
-  renderApp();
-}
-
-
-/* =========================================================
-   EDIT SCORE
-   ========================================================= */
-
-function beginEditScore(scoreId) {
-  const score = state.tracker.scores.find(
-    item => String(item.id) === String(scoreId)
-  );
-
-  if (!score) return;
-
-  state.tracker.editingScoreId = score.id;
-  state.tracker.selectedClassId = score.class_id;
-
-  clearTrackerMessage();
-
-  renderCurrentPage();
-
-  requestAnimationFrame(() => {
-
-    const chapterInput =
-      document.getElementById(
-        "tracker-chapter"
-      );
-
-    const scoreInput =
-      document.getElementById(
-        "tracker-score"
-      );
-
-    const dateInput =
-      document.getElementById(
-        "tracker-date"
-      );
-
-    if (chapterInput) {
-      chapterInput.value =
-        score.chapter_id;
-    }
-
-    if (scoreInput) {
-      scoreInput.value =
-        score.score;
-    }
-
-    if (dateInput) {
-      dateInput.value =
-        score.test_date;
-    }
-
-    document
-      .getElementById("tracker-score")
-      ?.focus();
-  });
-}
-
-
-/* =========================================================
-   DELETE SCORE
-   ========================================================= */
-
-async function deleteScore(scoreId) {
-  const score =
-    state.tracker.scores.find(
-      item =>
-        String(item.id) ===
-        String(scoreId)
-    );
-
-  if (!score) return;
-
-  const confirmed = window.confirm(
-    "Delete this score? This cannot be undone."
-  );
-
-  if (!confirmed) return;
-
-  const { error } =
-    await supabase
-      .from("scores")
-      .delete()
-      .eq("id", scoreId)
-      .eq("user_id", state.user.id);
-
-  if (error) {
-    console.error(
-      "Score delete error:",
-      error
-    );
-
-    showTrackerMessage(
-      error.message ||
-        "Unable to delete score.",
-      "error"
-    );
-
-    return;
-  }
-
-  state.tracker.editingScoreId = null;
-
-  state.tracker.message =
-    "Score deleted successfully.";
-
-  state.tracker.messageType =
-    "success";
-
-  await loadTrackerScores();
-
-  await refreshAcademicData();
-
-  renderApp();
-}
-
-
-/* =========================================================
-   CANCEL EDIT
-   ========================================================= */
-
-function cancelScoreEdit() {
-  state.tracker.editingScoreId = null;
-  clearTrackerMessage();
-
-  renderCurrentPage();
-}
-
-
-/* =========================================================
-   FEED
-   ========================================================= */
-
-async function loadFeed() {
-  const { data, error } =
-    await supabase
-      .from("feed_posts")
-      .select(`
-        *,
-        feed_reactions (
-          id,
-          user_id,
-          reaction
-        )
-      `)
-      .order("created_at", {
-        ascending: false
-      });
-
-  if (error) {
-    console.error(
-      "Unable to load feed:",
-      error
-    );
-
-    state.feedPosts = [];
-    return;
-  }
-
-  const posts = data || [];
-
-  const userIds = [
-    ...new Set(
-      posts.map(post => post.user_id)
-    )
-  ];
-
-  if (userIds.length) {
-    const { data: profiles } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .in("id", userIds);
-
-    const profileMap = {};
-
-    (profiles || []).forEach(profile => {
-      profileMap[profile.id] = profile;
-    });
-
-    posts.forEach(post => {
-      post.profile =
-        profileMap[post.user_id] || null;
-    });
-  }
-
-  state.feedPosts = posts;
-}
-
-
-async function togglePostReaction(postId) {
-  if (!state.user) return;
-
-  const post =
-    state.feedPosts.find(
-      item => item.id === postId
-    );
-
-  if (!post) return;
-
-  const reactions =
-    post.feed_reactions || [];
-
-  const existing =
-    reactions.find(
-      reaction =>
-        reaction.user_id === state.user.id &&
-        reaction.reaction === "heart"
-    );
-
-  if (existing) {
-
-    const { error } =
-      await supabase
-        .from("feed_reactions")
-        .delete()
-        .eq("id", existing.id);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-  } else {
-
-    const { error } =
-      await supabase
-        .from("feed_reactions")
-        .insert({
-          post_id: postId,
-          user_id: state.user.id,
-          reaction: "heart"
-        });
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-  }
-
-  await loadFeed();
-
-  if (state.currentPage === "home") {
-    renderApp();
-  }
-}
-
-
-async function createPost(event) {
-  event.preventDefault();
-
-  const textarea =
     document.getElementById(
-      "post-content"
-    );
+      "tracker-score"
+    )?.value;
 
-  const content =
-    textarea?.value.trim();
 
-  if (!content) return;
-
-  const { error } =
-    await supabase
-      .from("feed_posts")
-      .insert({
-        user_id: state.user.id,
-        content
-      });
-
-  if (error) {
-    console.error(
-      "Unable to create post:",
-      error
-    );
-
-    return;
-  }
-
-  await loadFeed();
-
-  renderApp();
-}
-
-
-/* =========================================================
-   ACTIVE USERS / PRESENCE
-   ========================================================= */
-
-async function updatePresence(status = "online") {
-  if (!state.user) return;
-
-  const { error } =
-    await supabase
-      .from("user_presence")
-      .upsert({
-        user_id: state.user.id,
-        status,
-        last_seen_at:
-          new Date().toISOString()
-      });
-
-  if (error) {
-    console.error(
-      "Presence update error:",
-      error
-    );
-  }
-}
-
-
-async function loadActiveUsers() {
-  const { data, error } =
-    await supabase
-      .from("user_presence")
-      .select("*")
-      .order("status", {
-        ascending: true
-      })
-      .limit(20);
-
-  if (error) {
-    console.error(
-      "Unable to load active users:",
-      error
-    );
-
-    state.activeUsers = [];
-    return;
-  }
-
-  const users = data || [];
-
-  const userIds = [
-    ...new Set(
-      users.map(user => user.user_id)
-    )
-  ];
-
-  if (!userIds.length) {
-    state.activeUsers = [];
-    return;
-  }
-
-  const { data: profiles } =
-    await supabase
-      .from("profiles")
-      .select("*")
-      .in("id", userIds);
-
-  const profileMap = {};
-
-  (profiles || []).forEach(profile => {
-    profileMap[profile.id] = profile;
-  });
-
-  state.activeUsers = users.map(user => ({
-    ...user,
-    profile:
-      profileMap[user.user_id] || null
-  }));
-}
-
-
-/* =========================================================
-   ACADEMIC DATA
-   ========================================================= */
-
-async function loadAcademicSummary() {
-  if (!state.user) return;
-
-  const { data, error } =
-    await supabase
-      .from("student_academic_summary")
-      .select("*")
-      .eq("user_id", state.user.id)
-      .maybeSingle();
-
-  if (error) {
-    console.error(
-      "Unable to load academic summary:",
-      error
-    );
-
-    state.academicSummary = null;
-    return;
-  }
-
-  state.academicSummary = data;
-}
-
-
-async function loadLatestScore() {
-  if (!state.user) return;
-
-  const { data, error } =
-    await supabase
-      .from("scores")
-      .select(`
-        *,
-        chapters (
-          chapter_number,
-          title
-        )
-      `)
-      .eq("user_id", state.user.id)
-      .order("test_date", {
-        ascending: false
-      })
-      .limit(1)
-      .maybeSingle();
-
-  if (error) {
-    console.error(
-      "Unable to load latest score:",
-      error
-    );
-
-    state.latestScore = null;
-    return;
-  }
-
-  state.latestScore = data;
-}
-
-
-async function refreshAcademicData() {
-  await Promise.all([
-    loadAcademicSummary(),
-    loadLatestScore()
-  ]);
-}
-
-
-async function loadHomepageData() {
-  await Promise.all([
-    loadFeed(),
-    loadActiveUsers(),
-    loadAcademicSummary(),
-    loadLatestScore()
-  ]);
-}
-
-
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
-
-async function navigateTo(page) {
-  state.currentPage = page;
-  state.mobileMenuOpen = false;
-  state.accountMenuOpen = false;
-
-  renderApp();
-
-  if (page === "home") {
-    await loadHomepageData();
-    renderApp();
-    return;
-  }
-
-  if (page === "chapter-tracker") {
-    await loadChapterTracker();
-    return;
-  }
-}
-
-
-function toggleStudyTools() {
-  state.studyToolsOpen =
-    !state.studyToolsOpen;
-
-  renderApp();
-}
-
-
-function toggleAccountMenu() {
-  state.accountMenuOpen =
-    !state.accountMenuOpen;
-
-  renderApp();
-}
-
-
-function toggleMobileMenu() {
-  state.mobileMenuOpen =
-    !state.mobileMenuOpen;
-
-  renderApp();
-}
-
-
-/* =========================================================
-   TOPBAR ACTIONS
-   ========================================================= */
-
-function handleTopbarAction(action) {
-  if (action === "messages") {
-    navigateTo("care-team");
-    return;
-  }
-
-  if (action === "notifications") {
-    window.alert(
-      "Notifications will be connected next."
-    );
-  }
-}
-
-
-async function handleAccountAction(action) {
-
-  switch (action) {
-
-    case "signout":
-      await signOut();
-      break;
-
-    case "profile":
-      state.accountMenuOpen = false;
-      navigateTo("account");
-      break;
-
-    case "details":
-    case "security":
-    case "privacy":
-    case "appearance":
-    case "export":
-      window.alert(
-        "This account feature will be connected next."
-      );
-      break;
-  }
-}
-
-
-/* =========================================================
-   SIGN OUT
-   ========================================================= */
-
-async function signOut() {
-  await updatePresence("offline");
-
-  const { error } =
-    await supabase.auth.signOut();
-
-  if (error) {
-    console.error(
-      "Sign out error:",
-      error
-    );
-  }
-}
-
-
-/* =========================================================
-   EVENT LISTENERS
-   ========================================================= */
-
-function attachAppListeners() {
-
-  /* Sidebar navigation */
-
-  document
-    .querySelectorAll("[data-nav]")
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          const page =
-            button.dataset.nav;
-
-          navigateTo(page);
-        }
-      );
-    });
-
-
-  /* Study tools */
-
-  document
-    .getElementById(
-      "study-tools-toggle"
-    )
-    ?.addEventListener(
-      "click",
-      toggleStudyTools
-    );
-
-
-  /* Mobile menu */
-
-  document
-    .getElementById(
-      "mobile-menu-button"
-    )
-    ?.addEventListener(
-      "click",
-      toggleMobileMenu
-    );
-
-
-  document
-    .getElementById(
-      "sidebar-overlay"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
-        state.mobileMenuOpen = false;
-        renderApp();
-      }
-    );
-
-
-  /* Account menu */
-
-  document
-    .getElementById(
-      "account-button"
-    )
-    ?.addEventListener(
-      "click",
-      event => {
-        event.stopPropagation();
-        toggleAccountMenu();
-      }
-    );
-
-
-  document
-    .querySelectorAll(
-      "[data-account-action]"
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          handleAccountAction(
-            button.dataset.accountAction
-          );
-        }
-      );
-    });
-
-
-  /* Topbar */
-
-  document
-    .querySelectorAll(
-      "[data-top-action]"
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          handleTopbarAction(
-            button.dataset.topAction
-          );
-        }
-      );
-    });
-
-
-  /* Feed */
-
-  document
-    .getElementById(
-      "create-post-form"
-    )
-    ?.addEventListener(
-      "submit",
-      createPost
-    );
-
-
-  document
-    .querySelectorAll(
-      "[data-react-post]"
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          togglePostReaction(
-            button.dataset.reactPost
-          );
-        }
-      );
-    });
-
-
-  /* Chapter Tracker */
-
-  document
-    .getElementById(
-      "score-form"
-    )
-    ?.addEventListener(
-      "submit",
-      handleScoreSubmit
-    );
-
-
-  document
-    .getElementById(
-      "cancel-score-edit"
-    )
-    ?.addEventListener(
-      "click",
-      cancelScoreEdit
-    );
-
-
-  document
-    .querySelectorAll(
-      "[data-edit-score]"
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          beginEditScore(
-            button.dataset.editScore
-          );
-        }
-      );
-    });
-
-
-  document
-    .querySelectorAll(
-      "[data-delete-score]"
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          deleteScore(
-            button.dataset.deleteScore
-          );
-        }
-      );
-    });
-
-
-  /* Tracker class selection */
-
-  document
-    .getElementById(
-      "tracker-class"
-    )
-    ?.addEventListener(
-      "change",
-      async event => {
-
-        state.tracker.selectedClassId =
-          event.target.value;
-
-        state.tracker.editingScoreId =
-          null;
-
-        clearTrackerMessage();
-
-        await loadTrackerScores();
-
-        renderCurrentPage();
-      }
-    );
-}
-
-
-/* =========================================================
-   AUTH LISTENER
-   ========================================================= */
-
-function setupAuthListener() {
-
-  supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-
-      state.session = session;
-      state.user = session?.user || null;
-
-      if (!state.user) {
-
-        state.profile = null;
-
-        document.getElementById(
-          "app"
-        ).innerHTML = renderLogin();
-
-        attachLoginListeners();
-
-        return;
-      }
-
-      await loadProfile();
-
-      await updatePresence("online");
-
-      state.currentPage = "home";
-
-      await loadHomepageData();
-
-      renderApp();
-    }
-  );
-}
-
-
-/* =========================================================
-   LOGIN LISTENERS
-   ========================================================= */
-
-function attachLoginListeners() {
-
-  document
-    .getElementById(
-      "login-form"
-    )
-    ?.addEventListener(
-      "submit",
-      handleLogin
-    );
-
-
-  document
-    .getElementById(
-      "forgot-password-button"
-    )
-    ?.addEventListener(
-      "click",
-      handleForgotPassword
-    );
-}
-
-
-/* =========================================================
-   INITIALIZATION
-   ========================================================= */
-
-async function initializeApp() {
-
-  const {
-    data: {
-      session
-    }
-  } =
-    await supabase.auth.getSession();
-
-  state.session = session;
-  state.user = session?.user || null;
-
-  if (!state.user) {
-
-    document.getElementById(
-      "app"
-    ).innerHTML = renderLogin();
-
-    attachLoginListeners();
-
-    setupAuthListener();
-
-    return;
-  }
-
-  await loadProfile();
-
-  await updatePresence("online");
-
-  state.currentPage = "home";
-
-  await loadHomepageData();
-
-  renderApp();
-
-  setupAuthListener();
-}
-
-
-/* =========================================================
-   PRESENCE CLEANUP
-   ========================================================= */
-
-window.addEventListener(
-  "beforeunload",
-  () => {
-
-    if (state.user) {
-      updatePresence("offline");
-    }
-
-  }
-);
-
-
-/* =========================================================
-   START STUDENTHUB
-   ========================================================= */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  initializeApp
-);
+  const
