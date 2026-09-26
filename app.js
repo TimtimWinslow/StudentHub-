@@ -342,6 +342,48 @@ async function signIn(email, password) {
   return data;
 }
 
+async function signUp(fullName, email, password) {
+  if (!supabaseClient) {
+    throw new Error("Supabase is not initialized.");
+  }
+
+  const {
+    data,
+    error
+  } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+        display_name: fullName
+      },
+      emailRedirectTo: window.location.origin
+    }
+  });
+
+  if (error) throw error;
+
+  return data;
+}
+
+async function updatePassword(password) {
+  if (!supabaseClient) {
+    throw new Error("Supabase is not initialized.");
+  }
+
+  const {
+    data,
+    error
+  } = await supabaseClient.auth.updateUser({
+    password
+  });
+
+  if (error) throw error;
+
+  return data;
+}
+
 async function resetPassword(email) {
   if (!supabaseClient) {
     throw new Error("Supabase is not initialized.");
@@ -485,6 +527,14 @@ function renderLogin() {
           Forgot your password?
         </button>
 
+        <button
+          class="text-button"
+          id="create-account"
+          type="button"
+        >
+          Create an account
+        </button>
+
       </div>
     </div>
   `;
@@ -498,6 +548,219 @@ function renderLogin() {
     "click",
     handleForgotPassword
   );
+
+  $("#create-account")?.addEventListener(
+    "click",
+    renderSignUp
+  );
+}
+
+function renderSignUp() {
+  const app = $("#app");
+  if (!app) return;
+
+  app.innerHTML = `
+    <div class="auth-page">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <div class="auth-logo-mark">S</div>
+          <div>
+            <h1>StudentHub</h1>
+            <p>Your CNA class. Your progress. Your community.</p>
+          </div>
+        </div>
+
+        <div class="auth-heading">
+          <h2>Create your account</h2>
+          <p>Join your CNA class on StudentHub.</p>
+        </div>
+
+        <form id="signup-form">
+          <label class="field-label">Full name</label>
+          <input id="signup-name" class="text-input" type="text" autocomplete="name" placeholder="Your full name" required />
+
+          <label class="field-label">Email</label>
+          <input id="signup-email" class="text-input" type="email" autocomplete="email" placeholder="you@example.com" required />
+
+          <label class="field-label">Password</label>
+          <input id="signup-password" class="text-input" type="password" autocomplete="new-password" placeholder="At least 6 characters" required />
+
+          <label class="field-label">Confirm password</label>
+          <input id="signup-confirm" class="text-input" type="password" autocomplete="new-password" placeholder="Re-enter your password" required />
+
+          <div id="signup-message" class="form-error"></div>
+
+          <button class="primary-button auth-submit" type="submit">
+            Create Account
+          </button>
+        </form>
+
+        <button class="text-button" id="back-to-login" type="button">
+          Back to Sign In
+        </button>
+      </div>
+    </div>
+  `;
+
+  $("#signup-form")?.addEventListener("submit", handleSignUp);
+  $("#back-to-login")?.addEventListener("click", renderLogin);
+}
+
+async function handleSignUp(event) {
+  event.preventDefault();
+
+  const fullName = $("#signup-name")?.value.trim();
+  const email = $("#signup-email")?.value.trim();
+  const password = $("#signup-password")?.value || "";
+  const confirm = $("#signup-confirm")?.value || "";
+  const message = $("#signup-message");
+  const button = document.querySelector('#signup-form button[type="submit"]');
+
+  if (message) message.textContent = "";
+
+  if (!fullName || !email || !password || !confirm) {
+    if (message) message.textContent = "Please complete every field.";
+    return;
+  }
+
+  if (password.length < 6) {
+    if (message) message.textContent = "Password must be at least 6 characters.";
+    return;
+  }
+
+  if (password !== confirm) {
+    if (message) message.textContent = "Passwords do not match.";
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Creating Account...";
+  }
+
+  try {
+    const data = await signUp(fullName, email, password);
+
+    if (data?.session?.user) {
+      state.user = data.session.user;
+      await startAuthenticatedApp();
+      return;
+    }
+
+    if (message) {
+      message.className = "form-success";
+      message.textContent = "Account created. Check your email to confirm your account, then sign in.";
+    }
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Create Account";
+    }
+  } catch (error) {
+    console.error(error);
+
+    if (message) {
+      message.className = "form-error";
+      message.textContent = error?.message || "Unable to create your account.";
+    }
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Create Account";
+    }
+  }
+}
+
+function renderResetPassword() {
+  const app = $("#app");
+  if (!app) return;
+
+  app.innerHTML = `
+    <div class="auth-page">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <div class="auth-logo-mark">S</div>
+          <div>
+            <h1>StudentHub</h1>
+            <p>Your CNA class. Your progress. Your community.</p>
+          </div>
+        </div>
+
+        <div class="auth-heading">
+          <h2>Set a new password</h2>
+          <p>Choose a new password for your StudentHub account.</p>
+        </div>
+
+        <form id="reset-password-form">
+          <label class="field-label">New password</label>
+          <input id="reset-password" class="text-input" type="password" autocomplete="new-password" placeholder="At least 6 characters" required />
+
+          <label class="field-label">Confirm new password</label>
+          <input id="reset-confirm" class="text-input" type="password" autocomplete="new-password" placeholder="Re-enter your password" required />
+
+          <div id="reset-message" class="form-error"></div>
+
+          <button class="primary-button auth-submit" type="submit">
+            Update Password
+          </button>
+        </form>
+      </div>
+    </div>
+  `;
+
+  $("#reset-password-form")?.addEventListener("submit", handleResetPassword);
+}
+
+async function handleResetPassword(event) {
+  event.preventDefault();
+
+  const password = $("#reset-password")?.value || "";
+  const confirm = $("#reset-confirm")?.value || "";
+  const message = $("#reset-message");
+  const button = document.querySelector('#reset-password-form button[type="submit"]');
+
+  if (message) message.textContent = "";
+
+  if (password.length < 6) {
+    if (message) message.textContent = "Password must be at least 6 characters.";
+    return;
+  }
+
+  if (password !== confirm) {
+    if (message) message.textContent = "Passwords do not match.";
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Updating...";
+  }
+
+  try {
+    await updatePassword(password);
+
+    if (message) {
+      message.className = "form-success";
+      message.textContent = "Password updated successfully. Returning to sign in...";
+    }
+
+    setTimeout(() => {
+      resetState();
+      renderLogin();
+    }, 1200);
+  } catch (error) {
+    console.error(error);
+
+    if (message) {
+      message.className = "form-error";
+      message.textContent = error?.message || "Unable to update your password.";
+    }
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Update Password";
+    }
+  }
 }
 
 async function handleLogin(event) {
@@ -6149,6 +6412,11 @@ function setupAuthListener() {
       if (session?.user) {
         state.user =
           session.user;
+
+        if (event === "PASSWORD_RECOVERY") {
+          renderResetPassword();
+          return;
+        }
 
         if (
           event ===
