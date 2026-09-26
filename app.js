@@ -6748,466 +6748,384 @@ async function saveProfile(event) {
 }
 
 /* =========================================================
-   ACCOUNT
+   ACCOUNT & SETTINGS
    ========================================================= */
 
 function renderAccount() {
+  const notifications = state.notificationPreferences || {
+    messages: true,
+    feed_activity: true,
+    calendar: true,
+    study_reminders: true,
+    academic_updates: true
+  };
+
+  const privacy = state.privacySettings || {
+    show_online_status: true,
+    allow_messages: true,
+    show_profile_picture: true
+  };
+
   return `
     <section class="page">
-
       <div class="page-header">
-
-        <div>
-
-          <p class="eyebrow">
-            ACCOUNT
-          </p>
-
-          <h1>
-            Account
-          </h1>
-
-          <p>
-            Manage your StudentHub account.
-          </p>
-
-        </div>
-
+        <p class="eyebrow">ACCOUNT</p>
+        <h1>Account & Settings</h1>
+        <p>Manage your profile, security, notifications, privacy, and StudentHub preferences.</p>
       </div>
 
-      <div class="account-grid">
+      <div class="settings-grid">
 
-        <section class="panel">
-
+        <section class="panel settings-panel">
           <div class="panel-header">
-
             <div>
-              <span class="panel-icon">
-                👤
-              </span>
-
-              <h2>
-                My Profile
-              </h2>
+              <span class="panel-icon">👤</span>
+              <h2>Account</h2>
             </div>
-
           </div>
 
-          <div class="profile-card">
-
-            <div class="large-avatar">
-              ${state.profile?.avatar_url
-                ? '<img src="' + escapeHtml(state.profile.avatar_url) + '" alt="" />'
-                : escapeHtml(getInitials(getDisplayName()))}
+          <div class="settings-section">
+            <div class="settings-account-card">
+              <div class="large-avatar">
+                ${state.profile?.avatar_url
+                  ? '<img src="' + escapeHtml(state.profile.avatar_url) + '" alt="" />'
+                  : escapeHtml(getInitials(getDisplayName()))}
+              </div>
+              <div>
+                <strong>${escapeHtml(getDisplayName())}</strong>
+                <span>${escapeHtml(state.user?.email || "")}</span>
+              </div>
             </div>
 
-            <div>
-
-              <h3>
-                ${escapeHtml(
-                  getDisplayName()
-                )}
-              </h3>
-
-              <p>
-                ${escapeHtml(
-                  state.user?.email ||
-                  ""
-                )}
-              </p>
-
+            <div class="settings-actions">
+              <button class="secondary-button" data-settings-action="profile">👤 Edit Profile</button>
+              <button class="secondary-button" data-settings-action="export">📦 Export My Data</button>
+              <button class="danger-button" data-settings-action="signout">🚪 Sign Out</button>
             </div>
-
           </div>
-
         </section>
 
-        <section class="panel">
-
+        <section class="panel settings-panel">
           <div class="panel-header">
-
             <div>
-              <span class="panel-icon">
-                ⚙️
-              </span>
-
-              <h2>
-                Account Controls
-              </h2>
+              <span class="panel-icon">🔐</span>
+              <h2>Password & Security</h2>
             </div>
-
           </div>
 
-          <div class="account-actions">
+          <form id="settings-password-form" class="settings-form">
+            <label class="field-label">New password</label>
+            <input id="settings-new-password" class="text-input" type="password" minlength="6" autocomplete="new-password" placeholder="At least 6 characters" required />
 
-            <button
-              class="secondary-button"
-              data-account-page-action="security"
-            >
-              🔐 Password & Security
-            </button>
+            <label class="field-label">Confirm new password</label>
+            <input id="settings-confirm-password" class="text-input" type="password" minlength="6" autocomplete="new-password" placeholder="Re-enter your password" required />
 
-            <button
-              class="secondary-button"
-              data-account-page-action="privacy"
-            >
-              🛡️ Privacy
-            </button>
+            <div id="settings-password-message" class="form-error"></div>
 
-            <button
-              class="secondary-button"
-              data-account-page-action="appearance"
-            >
-              🎨 Appearance / Theme
-            </button>
+            <button class="primary-button small-button" type="submit">Update Password</button>
+          </form>
+        </section>
 
-            <button
-              class="secondary-button"
-              data-account-page-action="notifications"
-            >
-              🔔 Notification Settings
-            </button>
-
-            <button
-              class="secondary-button"
-              data-account-page-action="export"
-            >
-              📦 Export My Data
-            </button>
-
-            <button
-              class="danger-button"
-              data-account-page-action="signout"
-            >
-              🚪 Sign Out
-            </button>
-
+        <section class="panel settings-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-icon">🔔</span>
+              <h2>Notification Settings</h2>
+            </div>
           </div>
 
+          <div class="settings-toggle-list">
+            ${renderSettingToggle("messages", "Messages", "Private message notifications", notifications.messages)}
+            ${renderSettingToggle("feed_activity", "Feed activity", "Updates from the Main Feed", notifications.feed_activity)}
+            ${renderSettingToggle("calendar", "Calendar", "Class and calendar reminders", notifications.calendar)}
+            ${renderSettingToggle("study_reminders", "Study reminders", "Study and learning reminders", notifications.study_reminders)}
+            ${renderSettingToggle("academic_updates", "Academic updates", "Grades and academic updates", notifications.academic_updates)}
+          </div>
+        </section>
+
+        <section class="panel settings-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-icon">🛡️</span>
+              <h2>Privacy</h2>
+            </div>
+          </div>
+
+          <div class="settings-toggle-list">
+            ${renderSettingToggle("show_online_status", "Online status", "Let classmates see when you're online or idle", privacy.show_online_status, "privacy")}
+            ${renderSettingToggle("allow_messages", "Private messages", "Allow classmates to start one-on-one conversations with you", privacy.allow_messages, "privacy")}
+            ${renderSettingToggle("show_profile_picture", "Profile picture", "Show your profile picture to classmates", privacy.show_profile_picture, "privacy")}
+          </div>
+        </section>
+
+        <section class="panel settings-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-icon">🎨</span>
+              <h2>Appearance</h2>
+            </div>
+          </div>
+
+          <div class="appearance-setting">
+            <div>
+              <strong>Theme</strong>
+              <span>Choose how StudentHub looks on this device.</span>
+            </div>
+            <button class="secondary-button" id="settings-theme-button" type="button">
+              ${document.documentElement.dataset.theme === "light" ? "☀️ Light" : "🌙 Dark"}
+            </button>
+          </div>
         </section>
 
       </div>
-
     </section>
   `;
 }
 
-async function hydrateAccount() {
-  const container =
-    $("#page-container");
-
-  if (!container) return;
-
-  container.innerHTML =
-    renderAccount();
-
-  document
-    .querySelectorAll(
-      "[data-account-page-action]"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        () => {
-          handleAccountAction(
-            button.dataset
-              .accountPageAction
-          );
-        }
-      );
-    });
+function renderSettingToggle(key, title, description, enabled, group = "notifications") {
+  return `
+    <label class="settings-toggle">
+      <span>
+        <strong>${escapeHtml(title)}</strong>
+        <small>${escapeHtml(description)}</small>
+      </span>
+      <input
+        type="checkbox"
+        data-settings-toggle="${escapeHtml(key)}"
+        data-settings-group="${escapeHtml(group)}"
+        ${enabled ? "checked" : ""}
+      />
+      <span class="settings-switch" aria-hidden="true"></span>
+    </label>
+  `;
 }
 
-async function handleAccountAction(
-  action
-) {
-  const menu =
-    $("#account-menu");
+async function hydrateAccount() {
+  const container = $("#page-container");
+  if (!container) return;
 
-  if (menu) {
-    menu.hidden = true;
+  container.innerHTML = renderAccount();
+
+  document.querySelectorAll("[data-settings-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const action = button.dataset.settingsAction;
+
+      if (action === "profile") {
+        await navigate("profile");
+      } else if (action === "export") {
+        await exportMyData();
+      } else if (action === "signout") {
+        await signOut();
+      }
+    });
+  });
+
+  $("#settings-password-form")?.addEventListener("submit", handleSettingsPassword);
+
+  document.querySelectorAll("[data-settings-toggle]").forEach((toggle) => {
+    toggle.addEventListener("change", () => {
+      saveSettingsToggle(toggle.dataset.settingsGroup, toggle.dataset.settingsToggle, toggle.checked);
+    });
+  });
+
+  $("#settings-theme-button")?.addEventListener("click", () => {
+    toggleTheme();
+    hydrateAccount();
+  });
+}
+
+async function handleSettingsPassword(event) {
+  event.preventDefault();
+
+  const password = $("#settings-new-password")?.value || "";
+  const confirm = $("#settings-confirm-password")?.value || "";
+  const message = $("#settings-password-message");
+  const button = document.querySelector("#settings-password-form button[type=\"submit\"]");
+
+  if (message) {
+    message.className = "form-error";
+    message.textContent = "";
   }
+
+  if (password.length < 6) {
+    if (message) message.textContent = "Password must be at least 6 characters.";
+    return;
+  }
+
+  if (password !== confirm) {
+    if (message) message.textContent = "Passwords do not match.";
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Updating...";
+  }
+
+  try {
+    await updatePassword(password);
+
+    if (message) {
+      message.className = "form-success";
+      message.textContent = "Password updated successfully.";
+    }
+
+    $("#settings-new-password").value = "";
+    $("#settings-confirm-password").value = "";
+  } catch (error) {
+    console.error("Settings password update error:", error);
+    if (message) {
+      message.className = "form-error";
+      message.textContent = error?.message || "Unable to update your password.";
+    }
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Update Password";
+    }
+  }
+}
+
+async function saveSettingsToggle(group, key, enabled) {
+  if (!supabaseClient || !state.user) return;
+
+  try {
+    if (group === "privacy") {
+      const next = {
+        ...(state.privacySettings || {}),
+        user_id: state.user.id,
+        [key]: enabled
+      };
+
+      const { data, error } = await supabaseClient
+        .from("privacy_settings")
+        .upsert(next, { onConflict: "user_id" })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      state.privacySettings = data;
+    } else {
+      const next = {
+        ...(state.notificationPreferences || {}),
+        user_id: state.user.id,
+        [key]: enabled
+      };
+
+      const { data, error } = await supabaseClient
+        .from("notification_preferences")
+        .upsert(next, { onConflict: "user_id" })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      state.notificationPreferences = data;
+    }
+
+    showMessage("Setting saved.");
+  } catch (error) {
+    console.error("Settings save error:", error);
+    showMessage(error?.message || "Unable to save that setting.", "error");
+  }
+}
+
+function buildExportData() {
+  return {
+    exported_at: new Date().toISOString(),
+    account: {
+      id: state.user?.id || null,
+      email: state.user?.email || null,
+      created_at: state.user?.created_at || null
+    },
+    profile: state.profile || null,
+    academic_summary: state.academicSummary || null,
+    score_details: state.scoreDetails || [],
+    chapters: state.chapters || [],
+    assignments: state.assignments || [],
+    calendar_events: state.calendarEvents || [],
+    notifications: state.notifications || [],
+    notification_preferences: state.notificationPreferences || null,
+    privacy_settings: state.privacySettings || null,
+    care_team_messages: state.careMessages || [],
+    pinned_messages: state.pinnedMessages || [],
+    message_reactions: state.messageReactions || [],
+    conversations: state.conversations || []
+  };
+}
+
+async function exportMyData() {
+  if (!state.user) return;
+
+  try {
+    showMessage("Preparing your data export...");
+
+    await Promise.allSettled([
+      loadAcademicSummary(),
+      loadScoreDetails(),
+      loadChapters(),
+      loadAssignments(),
+      loadCalendarEvents(),
+      loadNotifications(),
+      loadCareMessages(),
+      loadPinnedMessages(),
+      loadMessageReactions(),
+      loadConversations()
+    ]);
+
+    const blob = new Blob(
+      [JSON.stringify(buildExportData(), null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `studenthub-data-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    showMessage("Your StudentHub data export is ready.");
+  } catch (error) {
+    console.error("Data export error:", error);
+    showMessage(error?.message || "Unable to export your data.", "error");
+  }
+}
+
+async function handleAccountAction(action) {
+  const menu = $("#account-menu");
+  if (menu) menu.hidden = true;
 
   switch (action) {
     case "profile":
       await navigate("profile");
       break;
-
     case "details":
       await navigate("account");
       break;
-
     case "security":
-      await changePassword();
+      await navigate("account");
       break;
-
     case "privacy":
-      await managePrivacy();
+      await navigate("account");
       break;
-
     case "appearance":
-      toggleTheme();
+      await navigate("account");
       break;
-
     case "export":
-      await requestDataExport();
+      await exportMyData();
       break;
-
     case "notifications":
-      await manageNotifications();
+      await navigate("account");
       break;
-
     case "signout":
       await signOut();
       break;
-
     default:
       break;
   }
 }
-
-async function changePassword() {
-  const password =
-    prompt(
-      "Enter your new password:"
-    );
-
-  if (!password) return;
-
-  if (password.length < 6) {
-    alert(
-      "Password must be at least 6 characters."
-    );
-
-    return;
-  }
-
-  const {
-    error
-  } = await supabaseClient.auth.updateUser({
-    password
-  });
-
-  if (error) {
-    showMessage(
-      error.message ||
-      "Unable to change password.",
-      "error"
-    );
-
-    return;
-  }
-
-  showMessage(
-    "Password updated successfully."
-  );
-}
-
-async function managePrivacy() {
-  if (!supabaseClient || !state.user)
-    return;
-
-  const current =
-    state.privacySettings || {
-      show_online_status: true,
-      allow_messages: true,
-      show_profile_picture: true
-    };
-
-  const showOnline =
-    confirm(
-      `Show your online status?\n\nCurrent: ${
-        current.show_online_status
-          ? "ON"
-          : "OFF"
-      }`
-    );
-
-  const allowMessages =
-    confirm(
-      `Allow other students to message you?\n\nCurrent: ${
-        current.allow_messages
-          ? "ON"
-          : "OFF"
-      }`
-    );
-
-  const {
-    error
-  } = await supabaseClient
-    .from("privacy_settings")
-    .upsert({
-      user_id:
-        state.user.id,
-      show_online_status:
-        showOnline,
-      allow_messages:
-        allowMessages,
-      show_profile_picture:
-        current.show_profile_picture
-    });
-
-  if (error) {
-    showMessage(
-      error.message ||
-      "Unable to update privacy.",
-      "error"
-    );
-
-    return;
-  }
-
-  state.privacySettings = {
-    ...current,
-    show_online_status:
-      showOnline,
-    allow_messages:
-      allowMessages
-  };
-
-  showMessage(
-    "Privacy settings updated."
-  );
-}
-
-async function manageNotifications() {
-  if (!supabaseClient || !state.user)
-    return;
-
-  const current =
-    state.notificationPreferences || {
-      messages: true,
-      feed_activity: true,
-      calendar: true,
-      study_reminders: true,
-      academic_updates: true
-    };
-
-  const messages =
-    confirm(
-      "Enable message notifications?"
-    );
-
-  const feed =
-    confirm(
-      "Enable feed notifications?"
-    );
-
-  const calendar =
-    confirm(
-      "Enable calendar notifications?"
-    );
-
-  const study =
-    confirm(
-      "Enable study reminders?"
-    );
-
-  const academic =
-    confirm(
-      "Enable academic updates?"
-    );
-
-  const {
-    error
-  } = await supabaseClient
-    .from(
-      "notification_preferences"
-    )
-    .upsert({
-      user_id:
-        state.user.id,
-      messages,
-      feed_activity:
-        feed,
-      calendar,
-      study_reminders:
-        study,
-      academic_updates:
-        academic
-    });
-
-  if (error) {
-    showMessage(
-      error.message ||
-      "Unable to update notifications.",
-      "error"
-    );
-
-    return;
-  }
-
-  state.notificationPreferences = {
-    messages,
-    feed_activity:
-      feed,
-    calendar,
-    study_reminders:
-      study,
-    academic_updates:
-      academic
-  };
-
-  showMessage(
-    "Notification settings updated."
-  );
-}
-
-function toggleTheme() {
-  const current =
-    document.documentElement
-      .dataset.theme ||
-    "dark";
-
-  const next =
-    current === "dark"
-      ? "light"
-      : "dark";
-
-  document.documentElement
-    .dataset.theme =
-    next;
-
-  localStorage.setItem(
-    "studenthub-theme",
-    next
-  );
-
-  showMessage(
-    `${next === "dark" ? "Dark" : "Light"} theme selected.`
-  );
-}
-
-async function requestDataExport() {
-  if (!supabaseClient || !state.user)
-    return;
-
-  const {
-    error
-  } = await supabaseClient
-    .from("data_export_requests")
-    .insert({
-      user_id:
-        state.user.id,
-      status:
-        "requested"
-    });
-
-  if (error) {
-    showMessage(
-      error.message ||
-      "Unable to request your data export.",
-      "error"
-    );
-
-    return;
-  }
-
-  showMessage(
-    "Your data export request has been submitted."
-  );
-}
-
 /* =========================================================
    USER SETTINGS
    ========================================================= */
