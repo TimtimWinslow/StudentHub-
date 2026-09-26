@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
@@ -10,6 +11,44 @@
   <title>StudentHub</title>
 
   <link rel="stylesheet" href="style.css" />
+
+  <!-- StudentHub Debug System -->
+  <script>
+    window.STUDENTHUB_DEBUG = {
+      enabled:
+        new URLSearchParams(window.location.search).get("debug") === "true",
+      startedAt: new Date().toISOString(),
+      errors: []
+    };
+
+    window.addEventListener("error", function (event) {
+      window.STUDENTHUB_DEBUG.errors.push({
+        type: "JavaScript Error",
+        message: event.message || "Unknown JavaScript error",
+        source: event.filename || "Unknown source",
+        line: event.lineno || "Unknown line",
+        column: event.colno || "Unknown column"
+      });
+    });
+
+    window.addEventListener("unhandledrejection", function (event) {
+      window.STUDENTHUB_DEBUG.errors.push({
+        type: "Unhandled Promise Error",
+        message:
+          event.reason?.message ||
+          String(event.reason) ||
+          "Unknown promise error"
+      });
+    });
+
+    /*
+      This marker proves that index.html itself loaded.
+    */
+    document.documentElement.setAttribute(
+      "data-studenthub-index-loaded",
+      "true"
+    );
+  </script>
 </head>
 
 <body>
@@ -20,7 +59,10 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- StudentHub -->
+  <!-- StudentHub Debug System -->
+  <script src="debug.js"></script>
+
+  <!-- StudentHub Application -->
   <script src="app.js"></script>
 </body>
 </html>
