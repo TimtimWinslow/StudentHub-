@@ -1643,6 +1643,12 @@ function renderSidebar() {
         )}
 
         ${navButton(
+          "notifications",
+          "🔔",
+          "Notifications"
+        )}
+
+        ${navButton(
           "care-team",
           "💬",
           "The Care Team"
@@ -1911,6 +1917,7 @@ function getPageTitle() {
     home: "Home",
     calendar: "Calendar",
     assignments: "Assignments",
+    notifications: "Notifications",
     "care-team": "The Care Team",
     flashcards: "Flashcards",
     "quiz-maker": "Quiz Maker",
@@ -2002,7 +2009,7 @@ function attachShellEvents() {
   $("#notifications-button")
     ?.addEventListener(
       "click",
-      toggleNotificationPanel
+      () => navigate("notifications")
     );
 
   $("#close-notifications")
@@ -2110,6 +2117,9 @@ function renderPageContent() {
     case "assignments":
       return renderAssignments();
 
+    case "notifications":
+      return renderNotificationPage();
+
     case "care-team":
       return renderCareTeam();
 
@@ -2150,6 +2160,10 @@ async function hydratePage(page) {
 
   if (page === "assignments") {
     await hydrateAssignments();
+  }
+
+  if (page === "notifications") {
+    await hydrateNotificationsPage();
   }
 
   if (page === "care-team") {
@@ -5745,6 +5759,78 @@ function renderNotifications() {
   `;
 }
 
+function renderNotificationPage() {
+  const unread = state.notifications.filter((item) => !item.read).length;
+  return '<section class="page">' +
+    '<div class="page-header notification-page-header">' +
+      '<div><p class="eyebrow">STUDENTHUB</p><h1>Notifications</h1>' +
+      '<p>Stay up to date with your StudentHub activity.</p></div>' +
+      '<div class="notification-page-actions"><button class="secondary-button" id="mark-all-notifications-read" type="button"' +
+        (unread ? '' : ' disabled') + '>✓ Mark All Read</button></div>' +
+    '</div>' +
+    '<div class="notification-summary-grid">' +
+      '<div class="panel notification-summary-card"><span>All Notifications</span><strong>' + state.notifications.length + '</strong></div>' +
+      '<div class="panel notification-summary-card"><span>Unread</span><strong>' + unread + '</strong></div>' +
+      '<div class="panel notification-summary-card"><span>Latest</span><strong>' + (state.notifications.length ? escapeHtml(formatDate(state.notifications[0].created_at)) : '—') + '</strong></div>' +
+    '</div>' +
+    '<div class="panel notification-center-panel">' +
+      '<div class="panel-header"><div><span class="panel-icon">🔔</span><h2>Notification Center</h2></div></div>' +
+      '<div id="notification-page-list">' + renderNotificationCenterList() + '</div>' +
+    '</div>' +
+  '</section>';
+}
+
+function renderNotificationCenterList() {
+  if (!state.notifications.length) {
+    return '<div class="empty-state"><div class="empty-icon">🔔</div><h2>You\'re all caught up</h2><p>New StudentHub activity will appear here.</p></div>';
+  }
+  return '<div class="notification-center-list">' + state.notifications.map((notification) =>
+    '<article class="notification-center-item ' + (notification.read ? '' : 'unread') + '">' +
+      '<div class="notification-center-icon">' + (notification.read ? '🔔' : '●') + '</div>' +
+      '<div class="notification-center-content">' +
+        '<div class="notification-center-title-row"><strong>' + escapeHtml(notification.title || 'Notification') + '</strong><time>' + escapeHtml(formatDateTime(notification.created_at)) + '</time></div>' +
+        '<p>' + escapeHtml(notification.message || notification.body || '') + '</p>' +
+        (notification.read ? '' : '<button class="text-button notification-read-button" type="button" data-notification-read="' + escapeHtml(notification.id) + '">Mark as read</button>') +
+      '</div></article>'
+  ).join('') + '</div>';
+}
+
+async function markAllNotificationsRead() {
+  if (!supabaseClient || !state.user) return;
+  const { error } = await supabaseClient.from('notifications').update({ read: true }).eq('user_id', state.user.id).eq('read', false);
+  if (error) { showMessage(error.message || 'Unable to mark notifications as read.', 'error'); return; }
+  await loadNotifications();
+  const list = $('#notification-page-list');
+  if (list) list.innerHTML = renderNotificationCenterList();
+  const button = $('#mark-all-notifications-read');
+  if (button) button.disabled = true;
+  renderTopbarAfterNotificationChange();
+  showMessage('All notifications marked as read.');
+}
+
+function renderTopbarAfterNotificationChange() {
+  const badge = $('#notification-badge');
+  const unread = state.notifications.filter((item) => !item.read).length;
+  if (badge) { badge.textContent = unread; badge.classList.toggle('has-unread', unread > 0); }
+}
+
+async function hydrateNotificationsPage() {
+  await loadNotifications();
+  const container = $('#page-container');
+  if (!container) return;
+  container.innerHTML = renderNotificationPage();
+  $('#mark-all-notifications-read')?.addEventListener('click', markAllNotificationsRead);
+  document.querySelectorAll('[data-notification-read]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      await markNotificationRead(button.dataset.notificationRead);
+      const list = $('#notification-page-list');
+      if (list) list.innerHTML = renderNotificationCenterList();
+      const markAll = $('#mark-all-notifications-read');
+      if (markAll) markAll.disabled = !state.notifications.some((item) => !item.read);
+      renderTopbarAfterNotificationChange();
+    });
+  });
+}
 async function markNotificationRead(
   id
 ) {
