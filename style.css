@@ -3632,6 +3632,13 @@ img {
   min-width: 0;
 }
 
+.care-message-form .primary-button {
+  width: auto;
+  min-width: 72px;
+  padding: 10px 14px;
+  flex: 0 0 auto;
+}
+
 @media (max-width: 700px) {
   .care-team-panel {
     min-height: 70vh;
