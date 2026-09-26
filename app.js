@@ -58,6 +58,7 @@ const state = {
   quizQuestions: [],
 
   studyChecklist: [],
+  assignments: [],
   notes: [],
   studySessions: [],
 
@@ -1636,6 +1637,12 @@ function renderSidebar() {
         )}
 
         ${navButton(
+          "assignments",
+          "📝",
+          "Assignments"
+        )}
+
+        ${navButton(
           "care-team",
           "💬",
           "The Care Team"
@@ -1903,6 +1910,7 @@ function getPageTitle() {
   const titles = {
     home: "Home",
     calendar: "Calendar",
+    assignments: "Assignments",
     "care-team": "The Care Team",
     flashcards: "Flashcards",
     "quiz-maker": "Quiz Maker",
@@ -2099,6 +2107,9 @@ function renderPageContent() {
     case "calendar":
       return renderCalendar();
 
+    case "assignments":
+      return renderAssignments();
+
     case "care-team":
       return renderCareTeam();
 
@@ -2135,6 +2146,10 @@ async function hydratePage(page) {
 
   if (page === "calendar") {
     await hydrateCalendar();
+  }
+
+  if (page === "assignments") {
+    await hydrateAssignments();
   }
 
   if (page === "care-team") {
@@ -2815,6 +2830,84 @@ async function addCalendarEvent() {
   showMessage("Calendar event added.");
 
   await navigate("calendar");
+}
+
+/* =========================================================
+   ASSIGNMENTS
+   ========================================================= */
+
+async function loadAssignments() {
+  if (!supabaseClient || !state.user) return [];
+  const { data, error } = await supabaseClient
+    .from("assignments").select("*").eq("user_id", state.user.id)
+    .order("due_date", { ascending: true, nullsFirst: false });
+  if (error) { console.error("Assignments load error:", error); state.assignments=[]; return []; }
+  state.assignments = data || [];
+  return state.assignments;
+}
+
+function assignmentStatusLabel(status) {
+  return ({not_started:"Not Started",in_progress:"In Progress",completed:"Completed"})[status] || "Not Started";
+}
+
+function renderAssignments() {
+  const now = new Date();
+  const active = state.assignments.filter(a => a.status !== "completed");
+  const completed = state.assignments.filter(a => a.status === "completed");
+  const overdue = active.filter(a => a.due_date && new Date(a.due_date) < now);
+  return `<section class="page"><div class="page-header"><div><p class="eyebrow">STUDENTHUB</p><h1>Assignments</h1><p>Keep track of classwork, due dates, and what still needs to be finished.</p></div><button class="primary-button" id="add-assignment-button">+ Add Assignment</button></div><div class="assignment-summary-grid"><div class="panel assignment-stat"><strong>${active.length}</strong><span>Active</span></div><div class="panel assignment-stat"><strong>${completed.length}</strong><span>Completed</span></div><div class="panel assignment-stat"><strong>${overdue.length}</strong><span>Overdue</span></div></div><div class="panel"><div class="panel-header"><div><span class="panel-icon">📝</span><h2>My Assignments</h2></div></div>${renderAssignmentList()}</div></section>`;
+}
+
+function renderAssignmentList() {
+  if (!state.assignments.length) return `<div class="empty-state"><div class="empty-icon">📝</div><h3>No assignments yet</h3><p>Add your first class assignment.</p></div>`;
+  const now = new Date();
+  return `<div class="assignment-list">${state.assignments.map(a => {
+    const overdue = a.status !== "completed" && a.due_date && new Date(a.due_date) < now;
+    return `<article class="assignment-item ${overdue ? "assignment-overdue" : ""}"><div class="assignment-main"><div class="assignment-title-row"><h3>${escapeHtml(a.title || "Assignment")}</h3><span class="assignment-status">${escapeHtml(assignmentStatusLabel(a.status))}</span></div><p>${escapeHtml(a.description || "No description")}</p><div class="assignment-meta"><span>📅 ${a.due_date ? escapeHtml(formatDate(a.due_date)) : "No due date"}</span>${a.priority ? `<span>⚑ ${escapeHtml(a.priority)}</span>` : ""}</div></div><div class="assignment-actions"><button class="secondary-button" data-assignment-status="${escapeHtml(a.id)}">Status</button><button class="danger-action" data-assignment-delete="${escapeHtml(a.id)}">Delete</button></div></article>`;
+  }).join("")}</div>`;
+}
+
+async function addAssignment() {
+  if (!supabaseClient || !state.user) return;
+  const title = prompt("Assignment name:");
+  if (!title?.trim()) return;
+  const dueDate = prompt("Due date (YYYY-MM-DD, optional):");
+  const description = prompt("Description (optional):");
+  const priority = prompt("Priority (Low / Normal / High):", "Normal");
+  const { error } = await supabaseClient.from("assignments").insert({
+    user_id: state.user.id, title: title.trim(), description: description?.trim() || null,
+    due_date: dueDate?.trim() || null, priority: priority?.trim().toLowerCase() || "normal", status: "not_started"
+  });
+  if (error) { showMessage(error.message || "Unable to add assignment.", "error"); return; }
+  showMessage("Assignment added."); await navigate("assignments");
+}
+
+async function changeAssignmentStatus(id) {
+  const item = state.assignments.find(a => String(a.id) === String(id));
+  if (!item) return;
+  const choice = prompt("Status: not_started, in_progress, or completed", item.status || "not_started");
+  if (!choice) return;
+  const status = choice.trim().toLowerCase().replace(/\s+/g, "_");
+  if (!["not_started","in_progress","completed"].includes(status)) { showMessage("Invalid status.", "error"); return; }
+  const { error } = await supabaseClient.from("assignments").update({status}).eq("id", id).eq("user_id", state.user.id);
+  if (error) { showMessage(error.message || "Unable to update assignment.", "error"); return; }
+  await navigate("assignments");
+}
+
+async function deleteAssignment(id) {
+  if (!confirm("Delete this assignment?")) return;
+  const { error } = await supabaseClient.from("assignments").delete().eq("id", id).eq("user_id", state.user.id);
+  if (error) { showMessage(error.message || "Unable to delete assignment.", "error"); return; }
+  showMessage("Assignment deleted."); await navigate("assignments");
+}
+
+async function hydrateAssignments() {
+  await loadAssignments();
+  const container = $("#page-container"); if (!container) return;
+  container.innerHTML = renderAssignments();
+  $("#add-assignment-button")?.addEventListener("click", addAssignment);
+  document.querySelectorAll("[data-assignment-status]").forEach(b => b.addEventListener("click", () => changeAssignmentStatus(b.dataset.assignmentStatus)));
+  document.querySelectorAll("[data-assignment-delete]").forEach(b => b.addEventListener("click", () => deleteAssignment(b.dataset.assignmentDelete)));
 }
 
 /* =========================================================
