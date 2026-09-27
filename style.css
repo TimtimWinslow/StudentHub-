@@ -4284,3 +4284,11 @@ img {
 .admin-settings-grid strong,.admin-settings-grid span{display:block}.admin-settings-grid span{margin-top:5px;color:var(--text-secondary)}
 .admin-denied{padding:40px;text-align:center}
 @media(max-width:800px){.admin-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-grid{grid-template-columns:1fr}.admin-form-row{grid-template-columns:1fr}.admin-control-list{grid-template-columns:1fr}.admin-page-header{flex-direction:column}.admin-settings-grid{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   ROLE BADGES
+   ========================================================= */
+.role-badge{display:inline-flex;align-items:center;gap:5px;width:max-content;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;line-height:1;border:1px solid transparent;letter-spacing:.02em}
+.role-badge.admin{color:#ff6b6b;background:rgba(220,38,38,.14);border-color:rgba(220,38,38,.4)}
+.role-badge.student{color:#22d3ee;background:rgba(14,165,233,.14);border-color:rgba(14,165,233,.4)}
