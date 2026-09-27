@@ -6752,9 +6752,11 @@ function getProgressMetrics() {
   const pendingChapters = Math.max(chapters.length - completedChapters, 0);
 
   const summary = state.academicSummary || {};
-  const consistency = summary.score_consistency != null
-    ? Number(summary.score_consistency)
-    : null;
+  const mean = average;
+  const deviations = scores.length > 1 && mean != null ? scores.map((item) => Math.pow(Number(item.score) - mean, 2)) : [];
+  const standardDeviation = deviations.length ? Math.sqrt(deviations.reduce((sum, value) => sum + value, 0) / deviations.length) : 0;
+  const calculatedConsistency = scores.length > 1 ? Math.max(0, Math.min(100, 100 - standardDeviation)) : null;
+  const consistency = calculatedConsistency != null ? calculatedConsistency : (summary.score_consistency != null ? Number(summary.score_consistency) : null);
 
   return {
     scores,
@@ -6766,7 +6768,9 @@ function getProgressMetrics() {
     completedChapters,
     pendingChapters,
     consistency,
-    totalTests: scores.length
+    totalTests: scores.length,
+    standardDeviation,
+    passing: average != null ? average >= 80 : null
   };
 }
 
@@ -6805,9 +6809,7 @@ function renderProgressContent() {
     ? calculateLetterGrade(metrics.average)
     : (summary.overall_letter_grade || "—");
 
-  const consistency = metrics.consistency != null
-    ? metrics.consistency.toFixed(2)
-    : "—";
+  const consistency = metrics.consistency != null ? metrics.consistency.toFixed(1) + "%" : "—";
 
   const chapterTotal = metrics.chapters.length;
   const completionPercent = chapterTotal
@@ -6826,7 +6828,7 @@ function renderProgressContent() {
 
         <div class="progress-big-number">${average}%</div>
         <div class="progress-letter ${getLetterClass(letter)}">${escapeHtml(letter)}</div>
-        <p>Current academic average</p>
+        <p>Current academic average · ${metrics.passing == null ? "No passing status yet" : metrics.passing ? "Meets the 80% class requirement" : "Below the 80% class requirement"}</p>
 
         <div class="progress-bar-wrap" aria-label="Chapter completion">
           <div class="progress-bar-label">
@@ -6852,9 +6854,17 @@ function renderProgressContent() {
           <div class="stat-card"><span>GPA</span><strong>${gpa}</strong></div>
           <div class="stat-card"><span>Tests Completed</span><strong>${metrics.totalTests}</strong></div>
           <div class="stat-card"><span>Pending Chapters</span><strong>${metrics.pendingChapters}</strong></div>
-          <div class="stat-card"><span>Score Consistency</span><strong>${consistency}</strong></div>
+          <div class="stat-card"><span>Score Consistency</span><strong>${consistency}</strong><small>Higher = more consistent</small></div>
+          <div class="stat-card"><span>Passing Status</span><strong class="${metrics.passing === true ? "status-pass" : metrics.passing === false ? "status-needs-review" : ""}">${metrics.passing == null ? "—" : metrics.passing ? "Passing" : "Below 80%"}</strong></div>
           <div class="stat-card"><span>Lowest Score</span><strong>${metrics.lowest != null ? metrics.lowest.toFixed(2) + "%" : "—"}</strong></div>
           <div class="stat-card"><span>Highest Score</span><strong>${metrics.highest != null ? metrics.highest.toFixed(2) + "%" : "—"}</strong></div>
+        </div>
+      </div>
+
+      <div class="panel progress-trend-panel">
+        <div class="panel-header"><div><span class="panel-icon">📈</span><h2>Score Trend</h2></div><span class="assignment-count">${metrics.totalTests} recorded</span></div>
+        <div class="progress-trend">
+          ${metrics.scores.length ? metrics.scores.slice().reverse().map((score,index,arr)=>{ const value=Number(score.score); const previous=index>0?Number(arr[index-1].score):null; const delta=previous!=null?value-previous:null; const deltaText=delta==null?"First recorded score":`${delta>0?"+":""}${delta.toFixed(1)} pts`; return `<div class="trend-item"><div class="trend-label"><span>Ch. ${escapeHtml(score.chapter_number ?? "—")}</span><strong>${value.toFixed(1)}%</strong></div><div class="trend-track"><span style="width:${Math.max(0,Math.min(100,value))}%"></span></div><small>${escapeHtml(deltaText)}</small></div>`; }).join("") : `<div class="empty-state compact"><p>No score trend available yet.</p></div>`}
         </div>
       </div>
 
