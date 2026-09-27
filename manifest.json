@@ -35,42 +35,10 @@
       "purpose": "any maskable"
     }
   ],
-  "shortcuts": [
-    {
-      "name": "Home",
-      "short_name": "Home",
-      "url": "./?route=home",
-      "icons": [
-        {
-          "src": "assets/studenthub-favicon.svg",
-          "sizes": "64x64",
-          "type": "image/svg+xml"
-        }
-      ]
-    },
-    {
-      "name": "Calendar",
-      "short_name": "Calendar",
-      "url": "./?route=calendar",
-      "icons": [
-        {
-          "src": "assets/studenthub-favicon.svg",
-          "sizes": "64x64",
-          "type": "image/svg+xml"
-        }
-      ]
-    },
-    {
-      "name": "The Care Team",
-      "short_name": "Care Team",
-      "url": "./?route=care-team",
-      "icons": [
-        {
-          "src": "assets/studenthub-favicon.svg",
-          "sizes": "64x64",
-          "type": "image/svg+xml"
-        }
-      ]
-    }
-  ]
+  "launch_handler": {
+    "client_mode": [
+      "focus-existing",
+      "navigate-new"
+    ]
+  }
 }
