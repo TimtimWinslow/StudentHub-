@@ -6688,392 +6688,283 @@ async function handleScoreSubmit(
 function renderProgress() {
   return `
     <section class="page">
-
       <div class="page-header">
-
         <div>
-
-          <p class="eyebrow">
-            ACADEMIC PERFORMANCE
-          </p>
-
-          <h1>
-            Progress
-          </h1>
-
-          <p>
-            Your scores, averages, GPA,
-            consistency, and chapter progress.
-          </p>
-
+          <p class="eyebrow">ACADEMIC PERFORMANCE</p>
+          <h1>Progress</h1>
+          <p>Your scores, averages, GPA, consistency, and chapter progress.</p>
         </div>
-
+        ${state.classes.length > 1 ? `
+          <div class="progress-class-picker">
+            <label class="field-label" for="progress-class">Class</label>
+            <select id="progress-class" class="text-input">
+              ${state.classes.map((classItem) => `
+                <option value="${escapeHtml(classItem.id)}" ${String(classItem.id) === String(state.currentClassId) ? "selected" : ""}>
+                  ${escapeHtml(getClassLabel(classItem))}
+                </option>
+              `).join("")}
+            </select>
+          </div>
+        ` : ""}
       </div>
-
       <div id="progress-content">
         ${renderProgressContent()}
       </div>
-
     </section>
   `;
 }
 
-function renderProgressContent() {
-  const summary =
-    state.academicSummary;
+function getProgressScores() {
+  const currentClass = getCurrentClass();
+  if (!currentClass) return state.scoreDetails || [];
 
-  if (!summary) {
+  const classId = String(currentClass.id);
+  const matching = (state.scoreDetails || []).filter((score) =>
+    score.class_id == null || String(score.class_id) === classId
+  );
+
+  return matching;
+}
+
+function getProgressMetrics() {
+  const scores = getProgressScores()
+    .filter((score) => Number.isFinite(Number(score.score)))
+    .sort((a, b) => new Date(b.test_date || 0) - new Date(a.test_date || 0));
+
+  const chapters = getChaptersForClass();
+  const average = scores.length
+    ? scores.reduce((sum, item) => sum + Number(item.score), 0) / scores.length
+    : null;
+
+  const lowest = scores.length ? Math.min(...scores.map((item) => Number(item.score))) : null;
+  const highest = scores.length ? Math.max(...scores.map((item) => Number(item.score))) : null;
+
+  const latestByChapter = new Map();
+  scores.forEach((score) => {
+    const key = String(score.chapter_id ?? score.chapter_number ?? score.id);
+    if (!latestByChapter.has(key)) latestByChapter.set(key, score);
+  });
+
+  const completedChapters = chapters.filter((chapter) => {
+    return scores.some((score) => String(score.chapter_id) === String(chapter.id));
+  }).length;
+
+  const pendingChapters = Math.max(chapters.length - completedChapters, 0);
+
+  const summary = state.academicSummary || {};
+  const consistency = summary.score_consistency != null
+    ? Number(summary.score_consistency)
+    : null;
+
+  return {
+    scores,
+    chapters,
+    average,
+    lowest,
+    highest,
+    latest: scores[0] || null,
+    completedChapters,
+    pendingChapters,
+    consistency,
+    totalTests: scores.length
+  };
+}
+
+function renderProgressContent() {
+  const metrics = getProgressMetrics();
+  const summary = state.academicSummary || {};
+  const hasScores = metrics.scores.length > 0;
+
+  if (!hasScores && !metrics.chapters.length) {
     return `
       <div class="panel">
-
         <div class="empty-state">
-
-          <div class="empty-icon">
-            📈
-          </div>
-
-          <h2>
-            No progress data yet
-          </h2>
-
-          <p>
-            Add scores in Chapter Tracker
-            to start building your progress.
-          </p>
-
+          <div class="empty-icon">📈</div>
+          <h2>No progress data yet</h2>
+          <p>Add scores in Chapter Tracker to start building your progress.</p>
         </div>
-
       </div>
     `;
   }
 
-  const average =
-    summary.overall_average !==
-      null &&
-    summary.overall_average !==
-      undefined
-      ? Number(
-          summary.overall_average
-        ).toFixed(2)
-      : "—";
+  const average = metrics.average != null
+    ? metrics.average.toFixed(2)
+    : "—";
 
-  const gpa =
-    summary.GPA !== undefined &&
-    summary.GPA !== null
-      ? Number(
-          summary.GPA
-        ).toFixed(2)
-      : summary.gpa !== undefined &&
-        summary.gpa !== null
-      ? Number(
-          summary.gpa
-        ).toFixed(2)
-      : "—";
+  const gpa = metrics.average != null
+    ? calculateGPA(metrics.average).toFixed(2)
+    : (
+        summary.GPA != null
+          ? Number(summary.GPA).toFixed(2)
+          : summary.gpa != null
+            ? Number(summary.gpa).toFixed(2)
+            : "—"
+      );
 
-  const letter =
-    summary.overall_letter_grade ||
-    "—";
+  const letter = metrics.average != null
+    ? calculateLetterGrade(metrics.average)
+    : (summary.overall_letter_grade || "—");
 
-  const consistency =
-    summary.score_consistency !==
-      null &&
-    summary.score_consistency !==
-      undefined
-      ? Number(
-          summary.score_consistency
-        ).toFixed(2)
-      : "—";
+  const consistency = metrics.consistency != null
+    ? metrics.consistency.toFixed(2)
+    : "—";
 
-  const lowest =
-    summary.lowest_score !==
-      null &&
-    summary.lowest_score !==
-      undefined
-      ? `${Number(
-          summary.lowest_score
-        ).toFixed(2)}%`
-      : "—";
-
-  const highest =
-    summary.highest_score !==
-      null &&
-    summary.highest_score !==
-      undefined
-      ? `${Number(
-          summary.highest_score
-        ).toFixed(2)}%`
-      : "—";
+  const chapterTotal = metrics.chapters.length;
+  const completionPercent = chapterTotal
+    ? Math.round((metrics.completedChapters / chapterTotal) * 100)
+    : 0;
 
   return `
     <div class="progress-grid">
-
       <div class="panel progress-main-card">
-
         <div class="panel-header">
-
           <div>
-            <span class="panel-icon">
-              📊
-            </span>
-
-            <h2>
-              Personal Progress Snapshot
-            </h2>
+            <span class="panel-icon">📊</span>
+            <h2>Personal Progress Snapshot</h2>
           </div>
-
         </div>
 
-        <div class="progress-big-number">
-          ${average}%
+        <div class="progress-big-number">${average}%</div>
+        <div class="progress-letter ${getLetterClass(letter)}">${escapeHtml(letter)}</div>
+        <p>Current academic average</p>
+
+        <div class="progress-bar-wrap" aria-label="Chapter completion">
+          <div class="progress-bar-label">
+            <span>Chapter Completion</span>
+            <strong>${metrics.completedChapters}/${chapterTotal || "—"}</strong>
+          </div>
+          <div class="progress-bar">
+            <span style="width:${completionPercent}%"></span>
+          </div>
+          <small>${completionPercent}% complete</small>
         </div>
-
-        <div
-          class="progress-letter ${getLetterClass(
-            letter
-          )}"
-        >
-          ${escapeHtml(letter)}
-        </div>
-
-        <p>
-          Overall academic average
-        </p>
-
       </div>
 
       <div class="panel">
-
         <div class="panel-header">
-
           <div>
-            <span class="panel-icon">
-              🎓
-            </span>
-
-            <h2>
-              Academic Stats
-            </h2>
-
+            <span class="panel-icon">🎓</span>
+            <h2>Academic Stats</h2>
           </div>
-
         </div>
 
         <div class="stats-grid">
-
-          <div class="stat-card">
-            <span>GPA</span>
-            <strong>${gpa}</strong>
-          </div>
-
-          <div class="stat-card">
-            <span>Tests</span>
-            <strong>
-              ${summary.total_tests ?? 0}
-            </strong>
-          </div>
-
-          <div class="stat-card">
-            <span>Lowest</span>
-            <strong>${lowest}</strong>
-          </div>
-
-          <div class="stat-card">
-            <span>Highest</span>
-            <strong>${highest}</strong>
-          </div>
-
-          <div class="stat-card">
-            <span>Score Consistency</span>
-            <strong>
-              ${consistency}
-            </strong>
-          </div>
-
-          <div class="stat-card">
-            <span>Classes</span>
-            <strong>
-              ${summary.total_classes ?? 0}
-            </strong>
-          </div>
-
+          <div class="stat-card"><span>GPA</span><strong>${gpa}</strong></div>
+          <div class="stat-card"><span>Tests Completed</span><strong>${metrics.totalTests}</strong></div>
+          <div class="stat-card"><span>Pending Chapters</span><strong>${metrics.pendingChapters}</strong></div>
+          <div class="stat-card"><span>Score Consistency</span><strong>${consistency}</strong></div>
+          <div class="stat-card"><span>Lowest Score</span><strong>${metrics.lowest != null ? metrics.lowest.toFixed(2) + "%" : "—"}</strong></div>
+          <div class="stat-card"><span>Highest Score</span><strong>${metrics.highest != null ? metrics.highest.toFixed(2) + "%" : "—"}</strong></div>
         </div>
-
       </div>
 
       <div class="panel progress-chapters-panel">
-
         <div class="panel-header">
-
           <div>
             <span class="panel-icon">📚</span>
             <h2>Chapter Progress</h2>
           </div>
-
+          <span class="assignment-count">${metrics.completedChapters} completed · ${metrics.pendingChapters} pending</span>
         </div>
 
-        ${
-          getChaptersForClass().length
-            ? `
-              <div class="chapter-progress-list">
-                ${getChaptersForClass()
-                  .map((chapter) => {
-                    const matchingScore =
-                      state.scoreDetails.find(
-                        (score) =>
-                          String(score.chapter_id) ===
-                          String(chapter.id)
-                      );
+        ${metrics.chapters.length
+          ? `
+            <div class="chapter-progress-list">
+              ${metrics.chapters.map((chapter) => {
+                const matchingScore = metrics.scores.find(
+                  (score) => String(score.chapter_id) === String(chapter.id)
+                );
+                const completed = Boolean(matchingScore);
+                const scoreText = completed ? Number(matchingScore.score).toFixed(2) + "%" : "Pending";
+                const chapterLetter = completed
+                  ? (matchingScore.letter_grade || calculateLetterGrade(matchingScore.score))
+                  : "";
 
-                    const completed = Boolean(matchingScore);
-                    const scoreText = completed
-                      ? `${Number(matchingScore.score).toFixed(2)}%`
-                      : "Pending";
-
-                    const letter = completed
-                      ? (matchingScore.letter_grade || calculateLetterGrade(matchingScore.score))
-                      : "";
-
-                    return `
-                      <div class="chapter-progress-row">
-                        <div class="chapter-progress-main">
-                          <strong>Chapter ${escapeHtml(chapter.chapter_number)}</strong>
-                          <span>${escapeHtml(chapter.title || "Chapter")}</span>
-                        </div>
-                        <div class="chapter-progress-result">
-                          ${completed
-                            ? `<strong>${scoreText}</strong><span class="${getLetterClass(letter)}">${escapeHtml(letter)}</span>`
-                            : `<span class="chapter-pending">Pending</span>`}
-                        </div>
-                      </div>
-                    `;
-                  })
-                  .join("")}
-              </div>
-            `
-            : `
-              <div class="empty-state">
-                <p>Chapter list is not available yet.</p>
-              </div>
-            `
+                return `
+                  <div class="chapter-progress-row ${completed ? "chapter-complete" : "chapter-pending-row"}">
+                    <div class="chapter-progress-main">
+                      <strong>Chapter ${escapeHtml(chapter.chapter_number)}</strong>
+                      <span>${escapeHtml(chapter.title || "Chapter")}</span>
+                    </div>
+                    <div class="chapter-progress-result">
+                      ${completed
+                        ? `
+                          <strong>${scoreText}</strong>
+                          <span class="${getLetterClass(chapterLetter)}">${escapeHtml(chapterLetter)}</span>
+                          <span class="chapter-complete-badge">✓ Complete</span>
+                        `
+                        : `<span class="chapter-pending">Pending</span>`}
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          `
+          : `
+            <div class="empty-state">
+              <p>Chapter list is not available yet.</p>
+            </div>
+          `
         }
-
       </div>
 
       <div class="panel progress-history-panel">
-
         <div class="panel-header">
-
           <div>
-            <span class="panel-icon">
-              📚
-            </span>
-
-            <h2>
-              Score History
-            </h2>
+            <span class="panel-icon">📋</span>
+            <h2>Score History</h2>
           </div>
-
+          <span class="assignment-count">${metrics.scores.length} test${metrics.scores.length === 1 ? "" : "s"}</span>
         </div>
 
-        ${
-          state.scoreDetails.length
-            ? `
-              <div class="score-list">
-
-                ${state.scoreDetails
-                  .map(
-                    (score) => {
-                      const letter =
-                        score.letter_grade ||
-                        calculateLetterGrade(
-                          score.score
-                        );
-
-                      return `
-                        <div class="score-row">
-
-                          <div class="score-row-main">
-
-                            <strong>
-                              Chapter
-                              ${escapeHtml(
-                                score.chapter_number ??
-                                "—"
-                              )}
-                            </strong>
-
-                            <span>
-                              ${escapeHtml(
-                                score.chapter_title ||
-                                "Chapter"
-                              )}
-                            </span>
-
-                          </div>
-
-                          <div class="score-row-score">
-
-                            <strong>
-                              ${Number(
-                                score.score
-                              ).toFixed(2)}%
-                            </strong>
-
-                            <span
-                              class="${getLetterClass(
-                                letter
-                              )}"
-                            >
-                              ${escapeHtml(
-                                letter
-                              )}
-                            </span>
-
-                          </div>
-
-                          <div class="score-row-date">
-                            ${formatDate(
-                              score.test_date
-                            )}
-                          </div>
-
-                        </div>
-                      `;
-                    }
-                  )
-                  .join("")}
-
-              </div>
-            `
-            : `
-              <div class="empty-state">
-                <p>
-                  No score history yet.
-                </p>
-              </div>
-            `
+        ${metrics.scores.length
+          ? `
+            <div class="score-list">
+              ${metrics.scores.map((score) => {
+                const scoreLetter = score.letter_grade || calculateLetterGrade(score.score);
+                return `
+                  <div class="score-row">
+                    <div class="score-row-main">
+                      <strong>Chapter ${escapeHtml(score.chapter_number ?? "—")}</strong>
+                      <span>${escapeHtml(score.chapter_title || "Chapter")}</span>
+                    </div>
+                    <div class="score-row-score">
+                      <strong>${Number(score.score).toFixed(2)}%</strong>
+                      <span class="${getLetterClass(scoreLetter)}">${escapeHtml(scoreLetter)}</span>
+                    </div>
+                    <div class="score-row-date">${formatDate(score.test_date)}</div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          `
+          : `
+            <div class="empty-state">
+              <p>No score history yet.</p>
+            </div>
+          `
         }
-
       </div>
-
     </div>
   `;
 }
 
 async function hydrateProgress() {
   await Promise.all([
+    loadClasses(),
     loadAcademicSummary(),
     loadScoreDetails(),
     loadChapters()
   ]);
 
-  const container =
-    $("#progress-content");
+  const container = $("#progress-content");
+  if (container) container.innerHTML = renderProgressContent();
 
-  if (container) {
-    container.innerHTML =
-      renderProgressContent();
-  }
+  $("#progress-class")?.addEventListener("change", async (event) => {
+    state.currentClassId = event.target.value || null;
+    storeCurrentClassId(state.currentClassId);
+    if (container) container.innerHTML = renderProgressContent();
+  });
 }
 
 /* =========================================================
