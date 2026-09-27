@@ -32,6 +32,12 @@ const state = {
   profile: null,
   classes: [],
   currentPage: "home",
+  isAdmin: false,
+  adminStudents: [],
+  adminClasses: [],
+  adminChapters: [],
+  adminAuditLog: [],
+  adminSection: "dashboard",
 
   academicSummary: null,
   scoreDetails: [],
@@ -1952,6 +1958,17 @@ function renderSidebar() {
           "Progress"
         )}
 
+        ${
+          state.isAdmin
+            ? `
+              <div class="nav-section-label">
+                ADMIN
+              </div>
+              ${navButton("admin", "🛡️", "Admin")}
+            `
+            : ""
+        }
+
       </nav>
 
       <div class="sidebar-footer">
@@ -2412,6 +2429,9 @@ function renderPageContent() {
 
     case "account":
       return renderAccount();
+
+    case "admin":
+      return renderAdmin();
     case "search":
       return renderSearch();
 
@@ -2476,6 +2496,10 @@ async function hydratePage(page) {
   if (page === "account") {
     await hydrateAccount();
   }
+  if (page === "admin") {
+    await hydrateAdmin();
+  }
+
   if (page === "search") {
     await hydrateSearch();
   }
@@ -7665,7 +7689,8 @@ async function startAuthenticatedApp() {
       loadProfile(),
       loadClasses(),
       loadChapters(),
-      loadSettings()
+      loadSettings(),
+      loadAdminStatus()
     ]);
 
     await updatePresence(
