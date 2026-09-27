@@ -3824,6 +3824,10 @@ function renderCareTeam() {
           </div>
         </div>
 
+        <div class="care-team-toolbar">
+          <div><strong>Class Chat</strong><span>React, pin, edit, and message your classmates.</span></div>
+          <button type="button" class="secondary-button small-button" id="new-message-button">+ New Message</button>
+        </div>
         <div class="care-team-messages" id="care-team-messages">
           ${renderCareMessages()}
         </div>
@@ -4148,6 +4152,7 @@ function renderCareMessage(message) {
       class="care-message ${
         mine ? "mine" : ""
       }"
+      data-message-id="${escapeHtml(message.id)}"
     >
 
       <div class="avatar">
@@ -4191,13 +4196,7 @@ function renderCareMessage(message) {
         </div>
 
         <div class="care-message-actions">
-          <button
-            data-react-message="${escapeHtml(message.id)}"
-            class="${hasMyMessageReaction(message.id) ? "active" : ""}"
-            title="React with heart"
-          >
-            ❤️ ${getMessageReactionCount(message.id)}
-          </button>
+          <div class="reaction-picker">${renderMessageReactions(message.id)}</div>
 
           <button
             data-pin-message="${escapeHtml(message.id)}"
