@@ -4507,10 +4507,12 @@ async function hydrateDirectMessage() {
   const container = $("#page-container");
   if (!container) return;
 
+  state.careSearchQuery = "";
   container.innerHTML = renderDirectMessageConversation();
 
   $("#back-to-messages")?.addEventListener("click", () => navigate("messages"));
   $("#care-message-form")?.addEventListener("submit", handleCareMessageSubmit);
+  renderReplyComposer();
 
   document.querySelectorAll("[data-edit-message]").forEach((button) => {
     button.addEventListener("click", () => editCareMessage(button.dataset.editMessage));
@@ -4523,6 +4525,12 @@ async function hydrateDirectMessage() {
   });
   document.querySelectorAll("[data-pin-message]").forEach((button) => {
     button.addEventListener("click", () => togglePinnedMessage(button.dataset.pinMessage));
+  });
+  document.querySelectorAll("[data-reply-message]").forEach((button) => {
+    button.addEventListener("click", () => startReply(button.dataset.replyMessage));
+  });
+  document.querySelectorAll("[data-jump-message]").forEach((button) => {
+    button.addEventListener("click", () => jumpToMessage(button.dataset.jumpMessage));
   });
 }
 
@@ -4588,14 +4596,15 @@ async function hydrateCareTeam() {
   await loadCareConversations();
   await loadClassmates();
 
-  if (!state.currentConversationId) {
-    const group = state.conversations.find(
-      (conversation) =>
-        conversation.type === "group" &&
-        conversation.name === "The Care Team"
-    );
-    state.currentConversationId = group?.id || null;
-  }
+  // The Care Team page must always point at the class-wide group,
+  // even if the user was previously inside a one-on-one conversation.
+  const group = state.conversations.find(
+    (conversation) =>
+      conversation.type === "group" &&
+      conversation.name === "The Care Team"
+  );
+
+  state.currentConversationId = group?.id || null;
 
   await Promise.all([
     loadCareMessages(),
@@ -4747,8 +4756,13 @@ async function handleCareMessageSubmit(
 }
 
 async function sendCareMessage(content) {
-  if (!supabaseClient || !state.user)
+  if (!supabaseClient || !state.user || !state.currentConversationId)
     return;
+
+  const conversation = state.conversations.find(
+    (item) => item.id === state.currentConversationId
+  );
+  const isDirect = conversation?.type === "direct";
 
   const payload = {
     user_id: state.user.id,
@@ -4758,10 +4772,9 @@ async function sendCareMessage(content) {
     reply_to_message_id: state.replyToMessage?.id || null
   };
 
-  let result =
-    await supabaseClient
-      .from("messages")
-      .insert(payload);
+  let result = await supabaseClient
+    .from("messages")
+    .insert(payload);
 
   if (
     result.error &&
@@ -4769,34 +4782,35 @@ async function sendCareMessage(content) {
       ?.toLowerCase()
       .includes("content")
   ) {
-    result =
-      await supabaseClient
-        .from("messages")
-        .insert({
-          user_id:
-            state.user.id,
-          conversation_id:
-            state.currentConversationId,
-          message: content,
-          sender_id: state.user.id,
-          reply_to_message_id: state.replyToMessage?.id || null
-        });
+    result = await supabaseClient
+      .from("messages")
+      .insert({
+        user_id: state.user.id,
+        conversation_id: state.currentConversationId,
+        message: content,
+        sender_id: state.user.id,
+        reply_to_message_id: state.replyToMessage?.id || null
+      });
   }
 
   if (result.error) {
+    console.error("Message send error:", result.error);
     showMessage(
-      result.error.message ||
-      "Unable to send message.",
+      result.error.message || "Unable to send message.",
       "error"
     );
-
     return;
   }
 
   state.replyToMessage = null;
-  await hydrateCareTeam();
 
-  // Put the newest message into view after the chat rerenders.
+  // Keep group chat and one-on-one messages in their own conversation.
+  if (isDirect) {
+    await hydrateDirectMessage();
+  } else {
+    await hydrateCareTeam();
+  }
+
   requestAnimationFrame(() => {
     const chat = $("#care-team-messages");
     if (chat) {
