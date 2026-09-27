@@ -3339,7 +3339,14 @@ async function saveAssignment(event) {
   }
 
   try {
+    const currentClass = getCurrentClass();
+
+    if (!currentClass?.id) {
+      throw new Error("No class is selected for this assignment. Open Class and select your class, then try again.");
+    }
+
     const values = {
+      class_id: currentClass.id,
       title,
       description,
       due_date: dueDate,
