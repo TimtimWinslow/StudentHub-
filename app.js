@@ -66,6 +66,7 @@ const state = {
   searchQuery: "",
   searchResults: [],
   replyToMessage: null,
+  careSearchQuery: "",
 
   flashcardDecks: [],
   currentDeck: null,
@@ -590,6 +591,7 @@ function resetState() {
   state.currentConversationId = null;
   state.showNewMessage = false;
   state.replyToMessage = null;
+  state.careSearchQuery = "";
 
   state.flashcardDecks = [];
   state.currentDeck = null;
@@ -3899,10 +3901,25 @@ function renderCareTeam() {
           </div>
         </div>
 
-        <div class="care-team-toolbar">
-          <div><strong>Class Chat</strong><span>React, pin, edit, and message your classmates.</span></div>
-          <button type="button" class="secondary-button small-button" id="new-message-button">+ New Message</button>
+        <div class="care-team-toolbar care-team-toolbar-expanded">
+          <div>
+            <strong>Class Chat</strong>
+            <span>React, reply, pin, edit, and message your classmates.</span>
+          </div>
+          <div class="care-team-toolbar-actions">
+            <button type="button" class="secondary-button small-button" id="care-members-button">👥 Members</button>
+            <button type="button" class="secondary-button small-button" id="new-message-button">+ New Message</button>
+          </div>
         </div>
+        <div class="care-team-tools">
+          <div class="care-search-box">
+            <span>🔎</span>
+            <input id="care-message-search" class="text-input" type="search" value="${escapeHtml(state.careSearchQuery)}" placeholder="Search messages..." autocomplete="off" />
+            ${state.careSearchQuery ? '<button type="button" id="care-search-clear" class="secondary-button small-button">Clear</button>' : ""}
+          </div>
+          <span class="care-message-count">${state.careMessages.length} message${state.careMessages.length === 1 ? "" : "s"}</span>
+        </div>
+        ${renderPinnedMessageStrip()}
         <div class="care-team-messages" id="care-team-messages">
           ${renderCareMessages()}
         </div>
@@ -4136,6 +4153,21 @@ function renderNewMessageList() {
   `;
 }
 
+function renderCareMembers() {
+  const members = state.classmates.slice();
+  const me = state.profile || { id: state.user?.id, display_name: getDisplayName(), full_name: getDisplayName() };
+  if (state.user && !members.some((m) => m.id === state.user.id)) members.unshift(me);
+  return members.map((member) => {
+    const name = member.display_name || member.full_name || "Student";
+    return \`
+      <div class="care-member-row">
+        <div class="avatar small">${member.avatar_url ? \`<img src="${escapeHtml(member.avatar_url)}" alt="" />\` : escapeHtml(getInitials(name))}</div>
+        <div class="care-member-info"><strong>${escapeHtml(name)}${member.id === state.user?.id ? " (You)" : ""}</strong><span>${member.id === state.user?.id ? "You" : renderPresenceBadge(member.id)}</span></div>
+      </div>
+    \`;
+  }).join("");
+}
+
 function renderClassmateList(classmates) {
   if (!classmates.length) {
     return '<div class="conversation-empty">No classmates found.</div>';
@@ -4167,7 +4199,36 @@ function renderClassmateList(classmates) {
   }).join("");
 }
 
+function getFilteredCareMessages() {
+  const query = String(state.careSearchQuery || "").trim().toLowerCase();
+  if (!query) return state.careMessages;
+  return state.careMessages.filter((message) => {
+    const profile = message.profiles || {};
+    const name = profile.display_name || profile.full_name || "";
+    return [message.content, message.message, name].filter(Boolean).join(" ").toLowerCase().includes(query);
+  });
+}
+
+function renderPinnedMessageStrip() {
+  const pinned = state.pinnedMessages.filter((item) => state.careMessages.some((message) => message.id === item.message_id)).slice(0, 5);
+  if (!pinned.length) return "";
+  return `
+    <div class="care-pinned-strip">
+      <div class="care-pinned-heading">📌 <strong>Pinned</strong></div>
+      <div class="care-pinned-items">
+        ${pinned.map((item) => {
+          const message = state.careMessages.find((m) => m.id === item.message_id);
+          const value = message?.content || message?.message || "Pinned message";
+          return \`<button type="button" class="care-pinned-item" data-jump-message="${escapeHtml(item.message_id)}">${escapeHtml(value.slice(0, 100))}${value.length > 100 ? "…" : ""}</button>\`;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderCareMessages() {
+  const filteredMessages = getFilteredCareMessages();
+
   if (!state.careMessages.length) {
     return `
       <div class="empty-state">
@@ -4191,6 +4252,23 @@ function renderCareMessages() {
         )
         .join("")}
 
+    </div>
+  `;
+}
+
+  if (!filteredMessages.length) {
+    return `
+      <div class="empty-state">
+        <div class="empty-icon">🔎</div>
+        <h3>No matching messages</h3>
+        <p>Try another search.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="care-message-list">
+      ${filteredMessages.map((message) => renderCareMessage(message)).join("")}
     </div>
   `;
 }
@@ -4567,6 +4645,32 @@ async function hydrateCareTeam() {
 
   document.querySelectorAll("[data-jump-message]").forEach((button) => {
     button.addEventListener("click", () => jumpToMessage(button.dataset.jumpMessage));
+  });
+
+  $("#care-message-search")?.addEventListener("input", (event) => {
+    state.careSearchQuery = event.target.value;
+    const list = $("#care-team-messages");
+    if (list) list.innerHTML = renderCareMessages();
+    document.querySelectorAll("[data-jump-message]").forEach((button) => {
+      button.addEventListener("click", () => jumpToMessage(button.dataset.jumpMessage));
+    });
+  });
+
+  $("#care-search-clear")?.addEventListener("click", () => {
+    state.careSearchQuery = "";
+    hydrateCareTeam();
+  });
+
+  $("#care-members-button")?.addEventListener("click", () => {
+    const drawer = document.createElement("div");
+    drawer.className = "care-members-drawer";
+    drawer.innerHTML = `
+      <div class="care-members-card">
+        <div class="care-members-header"><strong>Care Team Members</strong><button type="button" id="close-care-members">×</button></div>
+        <div class="care-members-list">${renderCareMembers()}</div>
+      </div>`;
+    document.body.appendChild(drawer);
+    $("#close-care-members")?.addEventListener("click", () => drawer.remove());
   });
 }
 
