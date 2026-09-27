@@ -3081,7 +3081,7 @@ function renderAssignments() {
   const active = state.assignments.filter(a => a.status !== "completed");
   const completed = state.assignments.filter(a => a.status === "completed");
   const overdue = active.filter(a => a.due_date && new Date(a.due_date) < now);
-  return `<section class="page"><div class="page-header"><div><p class="eyebrow">STUDENTHUB</p><h1>Assignments</h1><p>Keep track of classwork, due dates, and what still needs to be finished.</p></div><button class="primary-button" id="add-assignment-button">+ Add Assignment</button></div><div class="assignment-summary-grid"><div class="panel assignment-stat"><strong>${active.length}</strong><span>Active</span></div><div class="panel assignment-stat"><strong>${completed.length}</strong><span>Completed</span></div><div class="panel assignment-stat"><strong>${overdue.length}</strong><span>Overdue</span></div></div><div class="panel"><div class="panel-header"><div><span class="panel-icon">📝</span><h2>My Assignments</h2></div></div>${renderAssignmentList()}</div></section>`;
+  return `<section class="page"><div class="page-header"><div><p class="eyebrow">STUDENTHUB</p><h1>Assignments</h1><p>Keep track of classwork, due dates, and what still needs to be finished.</p></div><button class="primary-button" id="add-assignment-button" type="button">+ Add Assignment</button></div><div class="assignment-summary-grid"><div class="panel assignment-stat"><strong>${active.length}</strong><span>Active</span></div><div class="panel assignment-stat"><strong>${completed.length}</strong><span>Completed</span></div><div class="panel assignment-stat"><strong>${overdue.length}</strong><span>Overdue</span></div></div><div class="panel"><div class="panel-header"><div><span class="panel-icon">📝</span><h2>My Assignments</h2></div></div>${renderAssignmentList()}</div><div class="assignment-modal-backdrop" id="assignment-modal" hidden><div class="assignment-modal" role="dialog" aria-modal="true"><div class="assignment-modal-header"><div><p class="eyebrow">NEW ASSIGNMENT</p><h2>Add Assignment</h2></div><button class="icon-button" id="close-assignment-modal" type="button" aria-label="Close">×</button></div><form id="assignment-form" class="assignment-form"><label class="field-label" for="assignment-title">Assignment name</label><input id="assignment-title" class="text-input" type="text" maxlength="200" placeholder="e.g. Chapter 6 worksheet" required /><label class="field-label" for="assignment-description">Description</label><textarea id="assignment-description" class="text-input" rows="3" maxlength="2000" placeholder="Optional details"></textarea><div class="assignment-form-grid"><div><label class="field-label" for="assignment-due-date">Due date</label><input id="assignment-due-date" class="text-input" type="date" /></div><div><label class="field-label" for="assignment-priority">Priority</label><select id="assignment-priority" class="text-input"><option value="low">Low</option><option value="normal" selected>Normal</option><option value="high">High</option></select></div></div><div id="assignment-form-message" class="form-error"></div><div class="assignment-modal-actions"><button class="secondary-button" id="cancel-assignment-modal" type="button">Cancel</button><button class="primary-button" id="save-assignment-button" type="submit">Save Assignment</button></div></form></div></div></section>`;
 }
 
 function renderAssignmentList() {
@@ -3093,19 +3093,40 @@ function renderAssignmentList() {
   }).join("")}</div>`;
 }
 
-async function addAssignment() {
+function openAssignmentModal() {
+  const modal = $("#assignment-modal"); if (!modal) return;
+  modal.hidden = false; document.body.classList.add("modal-open");
+  setTimeout(() => $("#assignment-title")?.focus(), 0);
+}
+function closeAssignmentModal() {
+  const modal = $("#assignment-modal"); if (!modal) return;
+  modal.hidden = true; document.body.classList.remove("modal-open");
+}
+async function saveAssignment(event) {
+  event.preventDefault();
   if (!supabaseClient || !state.user) return;
-  const title = prompt("Assignment name:");
-  if (!title?.trim()) return;
-  const dueDate = prompt("Due date (YYYY-MM-DD, optional):");
-  const description = prompt("Description (optional):");
-  const priority = prompt("Priority (Low / Normal / High):", "Normal");
-  const { error } = await supabaseClient.from("assignments").insert({
-    user_id: state.user.id, title: title.trim(), description: description?.trim() || null,
-    due_date: dueDate?.trim() || null, priority: priority?.trim().toLowerCase() || "normal", status: "not_started"
-  });
-  if (error) { showMessage(error.message || "Unable to add assignment.", "error"); return; }
-  showMessage("Assignment added."); await navigate("assignments");
+  const title = $("#assignment-title")?.value.trim();
+  const description = $("#assignment-description")?.value.trim() || null;
+  const dueDate = $("#assignment-due-date")?.value || null;
+  const priority = $("#assignment-priority")?.value || "normal";
+  const message = $("#assignment-form-message");
+  const button = $("#save-assignment-button");
+  if (message) { message.className = "form-error"; message.textContent = ""; }
+  if (!title) { if (message) message.textContent = "Enter an assignment name."; return; }
+  if (!["low","normal","high"].includes(priority)) { if (message) message.textContent = "Choose a valid priority."; return; }
+  if (button) { button.disabled = true; button.textContent = "Saving..."; }
+  try {
+    const { data, error } = await supabaseClient.from("assignments").insert({user_id: state.user.id,title,description,due_date: dueDate,priority,status:"not_started"}).select("*").single();
+    if (error) throw error;
+    if (!data?.id) throw new Error("Assignment was not returned after saving.");
+    state.assignments = [...state.assignments, data].sort((x,y) => !x.due_date ? 1 : !y.due_date ? -1 : new Date(x.due_date)-new Date(y.due_date));
+    closeAssignmentModal(); showMessage("Assignment saved."); await navigate("assignments");
+  } catch (error) {
+    console.error("Assignment save error:", error);
+    if (message) message.textContent = error?.message || "Unable to save assignment. Check Supabase permissions.";
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Save Assignment"; }
+  }
 }
 
 async function changeAssignmentStatus(id) {
@@ -3131,7 +3152,11 @@ async function hydrateAssignments() {
   await loadAssignments();
   const container = $("#page-container"); if (!container) return;
   container.innerHTML = renderAssignments();
-  $("#add-assignment-button")?.addEventListener("click", addAssignment);
+  $("#add-assignment-button")?.addEventListener("click", openAssignmentModal);
+  $("#close-assignment-modal")?.addEventListener("click", closeAssignmentModal);
+  $("#cancel-assignment-modal")?.addEventListener("click", closeAssignmentModal);
+  $("#assignment-form")?.addEventListener("submit", saveAssignment);
+  $("#assignment-modal")?.addEventListener("click", event => { if (event.target.id === "assignment-modal") closeAssignmentModal(); });
   document.querySelectorAll("[data-assignment-status]").forEach(b => b.addEventListener("click", () => changeAssignmentStatus(b.dataset.assignmentStatus)));
   document.querySelectorAll("[data-assignment-delete]").forEach(b => b.addEventListener("click", () => deleteAssignment(b.dataset.assignmentDelete)));
 }
