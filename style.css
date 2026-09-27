@@ -5214,3 +5214,7 @@ select:focus-visible {
 .pinned-messages-strip strong { white-space:nowrap; font-size:12px; }
 .pinned-messages-strip button { border:1px solid var(--border); background:rgba(255,255,255,.04); color:inherit; border-radius:9px; padding:6px 9px; cursor:pointer; white-space:nowrap; max-width:240px; overflow:hidden; text-overflow:ellipsis; }
 @media (max-width:700px) { .care-team-toolbar { align-items:flex-start; } .care-team-toolbar .small-button { width:auto !important; } .reaction-picker { gap:1px; } }
+/* Live presence badges */
+.presence-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);}
+.presence-badge.online{color:#22c55e}.presence-badge.idle{color:#f59e0b}.presence-badge.offline{color:var(--text-muted)}
+.presence-dot.online{background:#22c55e}.presence-dot.idle{background:#f59e0b}.presence-dot.offline{background:#777}
