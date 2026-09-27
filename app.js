@@ -1965,6 +1965,12 @@ function renderSidebar() {
           "Progress"
         )}
 
+        ${navButton(
+          "install",
+          "📱",
+          "Install StudentHub"
+        )}
+
         ${
           state.isAdmin
             ? `
@@ -1977,8 +1983,6 @@ function renderSidebar() {
         }
 
       </nav>
-
-      <div id="studenthub-install-slot" class="sidebar-install-slot"></div>
 
       <div class="sidebar-footer">
 
@@ -2034,6 +2038,75 @@ function navButton(page, icon, label) {
 /* =========================================================
    TOPBAR
    ========================================================= */
+
+/* =========================================================
+   INSTALL STUDENTHUB
+   ========================================================= */
+
+function renderInstallStudentHub() {
+  const standalone =
+    window.matchMedia?.("(display-mode: standalone)")?.matches ||
+    window.navigator.standalone === true;
+
+  return `
+    <section class="page install-page">
+      <div class="page-header">
+        <div>
+          <p class="eyebrow">STUDENTHUB APP</p>
+          <h1>Install StudentHub 📱</h1>
+          <p>Add StudentHub to your Home Screen and use it like a real app.</p>
+        </div>
+      </div>
+      <section class="panel install-panel">
+        <div class="install-hero">
+          <div class="install-logo"><img src="assets/studenthub-mark.svg" alt="StudentHub logo"></div>
+          <div>
+            <h2>${standalone ? "StudentHub is already installed" : "Take StudentHub with you"}</h2>
+            <p>${standalone ? "You're currently using the installed StudentHub app." : "Install StudentHub for quick access from your Home Screen."}</p>
+          </div>
+        </div>
+        <div class="install-actions">
+          <button type="button" class="primary-button install-page-button" id="install-page-button" ${standalone ? "disabled" : ""}>
+            ${standalone ? "✓ Already Installed" : "📱 Install StudentHub"}
+          </button>
+        </div>
+        <div class="install-instructions-grid">
+          <article class="install-instruction-card">
+            <div class="install-instruction-icon">🍎</div>
+            <h3>iPhone / iPad</h3>
+            <ol><li>Open StudentHub in Safari.</li><li>Tap <strong>Share</strong>.</li><li>Tap <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong>.</li></ol>
+          </article>
+          <article class="install-instruction-card">
+            <div class="install-instruction-icon">🤖</div>
+            <h3>Android</h3>
+            <ol><li>Open StudentHub in your browser.</li><li>Open the browser menu.</li><li>Tap <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</li><li>Confirm.</li></ol>
+          </article>
+        </div>
+        <div class="install-note">
+          <strong>What you get</strong>
+          <span>StudentHub opens from your Home Screen in its own app-style window with the same account and class data.</span>
+        </div>
+      </section>
+    </section>
+  `;
+}
+
+function attachInstallPageEvents() {
+  const button = $("#install-page-button");
+  if (!button) return;
+  if (!button.disabled) {
+    button.addEventListener("click", () => {
+      if (typeof window.studentHubInstall === "function") window.studentHubInstall();
+    });
+  }
+  const refresh = () => {
+    const installed = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+    button.disabled = installed;
+    button.textContent = installed ? "✓ Already Installed" : "📱 Install StudentHub";
+  };
+  window.addEventListener("studenthub-install-available", refresh);
+  window.addEventListener("studenthub-app-installed", refresh);
+}
 
 function renderTopbar() {
   const unread =
@@ -2219,6 +2292,7 @@ function getPageTitle() {
     "chapter-tracker":
       "Chapter Tracker",
     progress: "Progress",
+    install: "Install StudentHub",
     profile: "My Profile",
     account: "Account",
     search: "Search"
@@ -2442,6 +2516,9 @@ function renderPageContent() {
     case "progress":
       return renderProgress();
 
+    case "install":
+      return renderInstallStudentHub();
+
     case "profile":
       return renderProfile();
 
@@ -2505,6 +2582,10 @@ async function hydratePage(page) {
 
   if (page === "progress") {
     await hydrateProgress();
+  }
+
+  if (page === "install") {
+    attachInstallPageEvents();
   }
 
   if (page === "profile") {
