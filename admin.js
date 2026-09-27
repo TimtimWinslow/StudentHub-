@@ -522,6 +522,9 @@ async function hydrateAdmin() {
 const __adminLoadDataBase = loadAdminData;
 loadAdminData = async function() {
   await __adminLoadDataBase();
+  state.adminReports = await adminSafeQuery(
+    supabaseClient.from("message_reports").select("id,message_id,reporter_id,reason,status,admin_note,reviewed_by,reviewed_at,created_at").order("created_at",{ascending:false}).limit(100)
+  );
   state.adminPinnedMessages = await adminSafeQuery(
     supabaseClient.from("pinned_messages").select("id,message_id,pinned_by,created_at").order("created_at",{ascending:false}).limit(100)
   );
@@ -588,6 +591,7 @@ attachAdminEvents = function() {
   document.querySelectorAll("[data-admin-edit-class]").forEach(b=>b.addEventListener("click",()=>adminEditClass(b.dataset.adminEditClass)));
   document.querySelectorAll("[data-admin-edit-chapter]").forEach(b=>b.addEventListener("click",()=>adminEditChapter(b.dataset.adminEditChapter)));
   document.querySelectorAll("[data-admin-unpin-message]").forEach(b=>b.addEventListener("click",()=>adminUnpinMessage(b.dataset.adminUnpinMessage,b.dataset.messageId)));
+  document.querySelectorAll("[data-admin-report-status]").forEach(b=>b.addEventListener("click",()=>adminUpdateReport(b.dataset.adminReportStatus,b.dataset.status)));
 };
 
 
@@ -611,4 +615,12 @@ function rerenderAdminContent() {
   };
   c.innerHTML=(renderers[state.adminSection]||renderAdminDashboard)();
   attachAdminEvents();
+}
+
+async function adminUpdateReport(id,status) {
+ const note=prompt("Admin note (optional):","")||null;
+ const {error}=await supabaseClient.from("message_reports").update({status,admin_note:note,reviewed_by:state.user.id,reviewed_at:new Date().toISOString()}).eq("id",id);
+ if(error)return showToast(error.message,"error");
+ await adminAudit("update_message_report","message_report",id,{status});
+ await loadAdminData(); rerenderAdminContent(); showToast("Report updated.","success");
 }
