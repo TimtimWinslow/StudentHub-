@@ -17,6 +17,8 @@ let supabaseClient = null;
 
 let presenceHeartbeat = null;
 let activeUsersRefreshTimer = null;
+let careRealtimeChannel = null;
+let careRealtimeRefreshTimer = null;
 let presenceIdleTimer = null;
 let lastPresenceActivity = Date.now();
 
@@ -312,6 +314,66 @@ function getCurrentClass() {
 /* =========================================================
    SUPABASE INITIALIZATION
    ========================================================= */
+
+async function setupCareRealtime() {
+  if (!supabaseClient || !state.user) return;
+
+  if (careRealtimeChannel) {
+    await supabaseClient.removeChannel(careRealtimeChannel);
+    careRealtimeChannel = null;
+  }
+
+  careRealtimeChannel = supabaseClient
+    .channel("studenthub-care-team-realtime")
+    .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (payload) => {
+      const conversationId = payload.new?.conversation_id || payload.old?.conversation_id;
+      if (conversationId && conversationId !== state.currentConversationId) return;
+      scheduleCareRealtimeRefresh();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "message_reactions" }, (payload) => {
+      const messageId = payload.new?.message_id || payload.old?.message_id;
+      if (messageId && !state.careMessages.some((message) => message.id === messageId)) return;
+      scheduleCareRealtimeRefresh();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "pinned_messages" }, () => {
+      scheduleCareRealtimeRefresh();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "user_presence" }, (payload) => {
+      const userId = payload.new?.user_id || payload.old?.user_id;
+      if (
+        userId &&
+        userId !== state.user?.id &&
+        !state.classmates.some((classmate) => classmate.id === userId)
+      ) return;
+      scheduleCareRealtimeRefresh(true);
+    })
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR") {
+        console.warn("Care Team realtime channel error.");
+      }
+    });
+}
+
+function scheduleCareRealtimeRefresh(presenceOnly = false) {
+  if (!supabaseClient || !state.user) return;
+  if (careRealtimeRefreshTimer) clearTimeout(careRealtimeRefreshTimer);
+
+  careRealtimeRefreshTimer = setTimeout(async () => {
+    careRealtimeRefreshTimer = null;
+
+    if (state.currentPage !== "care-team" && state.currentPage !== "messages") return;
+
+    try {
+      if (state.currentPage === "care-team") {
+        await hydrateCareTeam();
+      } else if (state.currentPage === "messages") {
+        await hydrateMessages();
+      }
+    } catch (error) {
+      console.warn("Care Team realtime refresh failed:", error);
+    }
+  }, presenceOnly ? 500 : 250);
+}
 
 function initializeSupabase() {
   if (
@@ -8046,6 +8108,8 @@ function setupAuthListener() {
           await startAuthenticatedApp();
         }
 
+        await setupCareRealtime();
+
         return;
       }
 
@@ -8053,6 +8117,16 @@ function setupAuthListener() {
         event ===
         "SIGNED_OUT"
       ) {
+        if (careRealtimeChannel) {
+          supabaseClient.removeChannel(careRealtimeChannel);
+          careRealtimeChannel = null;
+        }
+
+        if (careRealtimeRefreshTimer) {
+          clearTimeout(careRealtimeRefreshTimer);
+          careRealtimeRefreshTimer = null;
+        }
+
         resetState();
         renderLogin();
       }
