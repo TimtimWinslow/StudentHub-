@@ -152,5 +152,115 @@
 
   <!-- StudentHub Application -->
   <script src="app.js"></script>
+
+  <!-- StudentHub PWA install experience -->
+  <script>
+    (() => {
+      let deferredInstallPrompt = null;
+
+      const isStandalone = () =>
+        window.matchMedia?.("(display-mode: standalone)")?.matches ||
+        window.navigator.standalone === true;
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      const isInAppBrowser = /FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
+
+      const removeInstallUi = () => {
+        document.getElementById("studenthub-install-button")?.remove();
+        document.getElementById("studenthub-install-modal")?.remove();
+      };
+
+      const showIOSInstructions = () => {
+        if (document.getElementById("studenthub-install-modal")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "studenthub-install-modal";
+        modal.className = "pwa-install-modal-backdrop";
+        modal.innerHTML = `
+          <div class="pwa-install-modal" role="dialog" aria-modal="true" aria-labelledby="pwa-install-title">
+            <div class="pwa-install-modal-header">
+              <div>
+                <span class="pwa-install-kicker">StudentHub App</span>
+                <h2 id="pwa-install-title">Add StudentHub to your iPhone</h2>
+              </div>
+              <button type="button" class="pwa-install-close" aria-label="Close">×</button>
+            </div>
+            <ol class="pwa-install-steps">
+              <li>Tap the <strong>Share</strong> button in Safari.</li>
+              <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+              <li>Tap <strong>Add</strong> to finish.</li>
+            </ol>
+            <p class="pwa-install-note">StudentHub will open from your Home Screen like an app.</p>
+            <button type="button" class="primary-button pwa-install-done">Got it</button>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelector(".pwa-install-close")?.addEventListener("click", close);
+        modal.querySelector(".pwa-install-done")?.addEventListener("click", close);
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) close();
+        });
+      };
+
+      const createInstallButton = () => {
+        if (isStandalone() || isInAppBrowser || document.getElementById("studenthub-install-button")) return;
+
+        const button = document.createElement("button");
+        button.id = "studenthub-install-button";
+        button.type = "button";
+        button.className = "pwa-install-button";
+        button.innerHTML = `
+          <span class="pwa-install-icon">⌂</span>
+          <span>
+            <strong>Install StudentHub</strong>
+            <small>Add StudentHub to your Home Screen</small>
+          </span>
+        `;
+
+        button.addEventListener("click", async () => {
+          if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            const result = await deferredInstallPrompt.userChoice;
+            if (result?.outcome === "accepted") removeInstallUi();
+            deferredInstallPrompt = null;
+            return;
+          }
+
+          if (isIOS) {
+            showIOSInstructions();
+            return;
+          }
+
+          alert("To install StudentHub, use your browser's Install or Add to Home Screen option.");
+        });
+
+        document.body.appendChild(button);
+      };
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        createInstallButton();
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        removeInstallUi();
+      });
+
+      window.addEventListener("load", () => {
+        if (!isStandalone() && !isInAppBrowser) createInstallButton();
+      });
+
+      window.addEventListener("pageshow", () => {
+        if (isStandalone()) removeInstallUi();
+      });
+    })();
+  </script>
 </body>
 </html>
