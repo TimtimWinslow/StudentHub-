@@ -4746,3 +4746,11 @@ select:focus-visible {
 .admin-muted{color:var(--text-muted);font-size:12px}
 #admin-enrollment-status{margin-top:8px}
 @media(max-width:800px){.admin-enrollment-form{grid-template-columns:1fr}.admin-enrollment-chip{align-items:flex-start;flex-direction:column}.admin-enrollment-chip .small-button{width:100%}}
+
+
+/* FULL ADMIN CONTROL */
+.admin-row-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.admin-status{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:800}
+.admin-status.active{color:#22c55e;background:rgba(34,197,94,.12)}
+.admin-status.suspended{color:#f87171;background:rgba(248,113,113,.12)}
+@media(max-width:800px){.admin-row-actions{justify-content:stretch}.admin-row-actions>*{flex:1}.admin-status{margin-bottom:6px}}
