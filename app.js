@@ -3698,6 +3698,25 @@ async function loadCareConversations() {
     conversations = data || [];
   }
 
+  // Direct conversations are also loaded by creator. This is an important
+  // fallback for the sender: the creator is always allowed to see the
+  // conversation even if membership visibility has not refreshed yet.
+  const { data: createdDirects, error: createdDirectError } = await supabaseClient
+    .from("conversations")
+    .select("*")
+    .eq("type", "direct")
+    .eq("created_by", state.user.id)
+    .order("updated_at", { ascending: false });
+
+  if (!createdDirectError && createdDirects?.length) {
+    const existingIds = new Set(conversations.map((conversation) => conversation.id));
+    for (const conversation of createdDirects) {
+      if (!existingIds.has(conversation.id)) {
+        conversations.push(conversation);
+      }
+    }
+  }
+
   // The Care Team is always discoverable, even before a newly registered
   // student has opened it for the first time.
   const { data: groupConversation, error: groupError } = await supabaseClient
