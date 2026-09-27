@@ -4782,3 +4782,6 @@ select:focus-visible {
   .admin-table-wrap{overflow-x:auto}
   .admin-table{min-width:720px}
 }
+
+.admin-check-row{display:flex;align-items:center;gap:9px;padding:10px 2px;color:var(--text-color,#eef7fb);font-size:14px}
+.admin-check-row input{width:17px;height:17px;accent-color:#12d7e8}
