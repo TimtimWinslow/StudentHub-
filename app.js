@@ -4060,6 +4060,7 @@ async function sendCareMessage(content) {
 
   const payload = {
     user_id: state.user.id,
+    sender_id: state.user.id,
     conversation_id: state.currentConversationId,
     content
   };
@@ -4083,7 +4084,8 @@ async function sendCareMessage(content) {
             state.user.id,
           conversation_id:
             state.currentConversationId,
-          message: content
+          message: content,
+          sender_id: state.user.id
         });
   }
 
