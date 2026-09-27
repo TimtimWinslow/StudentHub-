@@ -41,6 +41,7 @@ const state = {
   adminChapters: [],
   adminAuditLog: [],
   adminEnrollments: [],
+  adminReports: [],
   adminSection: "dashboard",
 
   academicSummary: null,
@@ -4666,7 +4667,7 @@ async function hydrateCareTeam() {
 
   document.querySelectorAll("[data-react-message]").forEach((button) => {
     button.addEventListener("click", () =>
-      toggleMessageReaction(button.dataset.reactMessage)
+      toggleMessageReaction(button.dataset.reactMessage, button.dataset.reaction || "❤️")
     );
   });
 
