@@ -3276,27 +3276,56 @@ async function loadCareMessages() {
     return [];
   }
 
+  // Load messages without relying on a specific foreign-key relationship
+  // between messages and profiles. The current messages table uses
+  // sender_id as its required sender field.
   const { data, error } = await supabaseClient
     .from("messages")
-    .select(`
-      *,
-      profiles (
-        id,
-        display_name,
-        full_name,
-        avatar_url
-      )
-    `)
+    .select("*")
     .eq("conversation_id", state.currentConversationId)
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("Care Team load error:", error);
+    console.error("Care Team message load error:", error);
     state.careMessages = [];
     return [];
   }
 
-  state.careMessages = data || [];
+  const messages = data || [];
+  const senderIds = [
+    ...new Set(
+      messages
+        .map((message) => message.sender_id || message.user_id)
+        .filter(Boolean)
+    )
+  ];
+
+  let profilesById = {};
+
+  if (senderIds.length) {
+    const { data: profiles, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("id, display_name, full_name, avatar_url")
+      .in("id", senderIds);
+
+    if (profileError) {
+      console.warn("Care Team profile load warning:", profileError);
+    } else {
+      profilesById = Object.fromEntries(
+        (profiles || []).map((profile) => [profile.id, profile])
+      );
+    }
+  }
+
+  state.careMessages = messages.map((message) => {
+    const senderId = message.sender_id || message.user_id;
+
+    return {
+      ...message,
+      profiles: profilesById[senderId] || null
+    };
+  });
+
   return state.careMessages;
 }
 
@@ -3686,7 +3715,7 @@ function renderCareMessage(message) {
     "Student";
 
   const mine =
-    message.user_id ===
+    (message.sender_id || message.user_id) ===
     state.user?.id;
 
   const created =
@@ -4100,6 +4129,14 @@ async function sendCareMessage(content) {
   }
 
   await hydrateCareTeam();
+
+  // Put the newest message into view after the chat rerenders.
+  requestAnimationFrame(() => {
+    const chat = $("#care-team-messages");
+    if (chat) {
+      chat.scrollTop = chat.scrollHeight;
+    }
+  });
 }
 
 async function editCareMessage(
