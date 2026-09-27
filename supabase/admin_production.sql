@@ -55,3 +55,10 @@ on public.admin_audit_log(created_at desc);
 
 create index if not exists admin_audit_log_admin_user_idx
 on public.admin_audit_log(admin_user_id);
+
+
+drop policy if exists "Admins can manage enrollments" on public.enrollments;
+create policy "Admins can manage enrollments"
+on public.enrollments for all to authenticated
+using (exists (select 1 from public.admin_users a where a.user_id = auth.uid() and a.active = true))
+with check (exists (select 1 from public.admin_users a where a.user_id = auth.uid() and a.active = true));
