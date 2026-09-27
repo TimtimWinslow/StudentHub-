@@ -4292,3 +4292,246 @@ img {
 .role-badge{display:inline-flex;align-items:center;gap:5px;width:max-content;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;line-height:1;border:1px solid transparent;letter-spacing:.02em}
 .role-badge.admin{color:#ff6b6b;background:rgba(220,38,38,.14);border-color:rgba(220,38,38,.4)}
 .role-badge.student{color:#22d3ee;background:rgba(14,165,233,.14);border-color:rgba(14,165,233,.4)}
+
+
+/* =========================================================
+   MOBILE / PWA HARDENING
+   ========================================================= */
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-x: none;
+}
+
+body {
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-x: none;
+}
+
+#app {
+  min-height: 100dvh;
+}
+
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+button,
+a,
+.nav-item,
+.topbar-icon-button,
+.topbar-button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 800px) {
+  .app-shell {
+    min-height: 100dvh;
+  }
+
+  .sidebar {
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    min-height: calc(var(--topbar-height) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+
+  .main-area {
+    width: 100%;
+    margin-left: 0;
+    min-width: 0;
+  }
+
+  .page-content {
+    width: 100%;
+    min-width: 0;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .topbar-actions {
+    gap: 3px;
+  }
+
+  .topbar-icon-button,
+  .topbar-button,
+  .account-button {
+    min-width: 42px;
+    min-height: 42px;
+  }
+
+  .account-menu,
+  .notification-panel {
+    top: calc(var(--topbar-height) + env(safe-area-inset-top) + 4px);
+    right: max(10px, env(safe-area-inset-right));
+    left: max(10px, env(safe-area-inset-left));
+    width: auto;
+    max-width: none;
+  }
+
+  .panel,
+  .card,
+  .admin-panel,
+  .messages-page-panel,
+  .care-team-panel {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .panel-body,
+  .panel-header {
+    min-width: 0;
+  }
+
+  .home-grid,
+  .tracker-layout,
+  .admin-grid {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-wrap,
+  .admin-table-wrap,
+  .calendar-panel,
+  .calendar-event-list {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .auth-page {
+    min-height: 100dvh;
+    align-items: flex-start;
+    padding:
+      max(18px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+
+  .auth-card {
+    margin: auto 0;
+    padding: 26px 20px;
+  }
+
+  .auth-logo h1 {
+    font-size: 25px;
+  }
+
+  .auth-logo p {
+    font-size: 13px;
+  }
+
+  .care-message-form {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .small-button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 500px) {
+  .page-content {
+    padding-top: 14px;
+  }
+
+  .topbar-title {
+    font-size: 17px;
+  }
+
+  .topbar-search-button {
+    flex: 0 0 40px;
+  }
+
+  .home-header > div > p:last-child {
+    font-size: 14px;
+  }
+
+  .auth-logo {
+    gap: 10px;
+  }
+
+  .auth-logo-mark {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+  }
+
+  .auth-card {
+    border-radius: 16px;
+  }
+
+  .calendar-toolbar,
+  .admin-page-header,
+  .notification-page-header,
+  .messages-page-header {
+    gap: 10px;
+  }
+
+  .calendar-grid {
+    min-width: 0;
+  }
+
+  .calendar-day {
+    min-height: 76px;
+    padding: 5px;
+  }
+
+  .calendar-day-event {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .admin-stat-card {
+    padding: 13px;
+  }
+
+  .admin-stat-card strong {
+    font-size: 23px;
+  }
+
+  .role-badge {
+    font-size: 10px;
+    padding: 4px 7px;
+  }
+}
+
+@media (max-width: 370px) {
+  .topbar-actions {
+    gap: 0;
+  }
+
+  .topbar-icon-button,
+  .topbar-button {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .account-button {
+    padding-right: 3px;
+  }
+
+  .auth-card {
+    padding: 22px 16px;
+  }
+}
