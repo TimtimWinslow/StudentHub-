@@ -2,14 +2,25 @@
   "name": "StudentHub",
   "short_name": "StudentHub",
   "description": "Your CNA class. Your progress. Your community.",
-  "start_url": "./",
+  "start_url": "./?source=pwa",
   "scope": "./",
   "id": "./",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#071A2B",
   "theme_color": "#071A2B",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "assets/studenthub-mark.svg",
@@ -22,6 +33,44 @@
       "sizes": "64x64",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "url": "./?route=home",
+      "icons": [
+        {
+          "src": "assets/studenthub-favicon.svg",
+          "sizes": "64x64",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "url": "./?route=calendar",
+      "icons": [
+        {
+          "src": "assets/studenthub-favicon.svg",
+          "sizes": "64x64",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "The Care Team",
+      "short_name": "Care Team",
+      "url": "./?route=care-team",
+      "icons": [
+        {
+          "src": "assets/studenthub-favicon.svg",
+          "sizes": "64x64",
+          "type": "image/svg+xml"
+        }
+      ]
     }
   ]
 }
