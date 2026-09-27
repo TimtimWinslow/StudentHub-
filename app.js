@@ -63,6 +63,7 @@ const state = {
   conversations: [],
   classmates: [],
   currentConversationId: null,
+  currentConversationType: null,
   showNewMessage: false,
   searchQuery: "",
   searchResults: [],
@@ -373,7 +374,15 @@ function scheduleCareRealtimeRefresh(presenceOnly = false) {
         (item) => item.id === state.currentConversationId
       );
 
-      if (conversation?.type === "direct") {
+      if (
+        state.currentPage === "messages" &&
+        state.currentConversationId &&
+        (
+          state.currentConversationType === "direct" ||
+          conversation?.type === "direct"
+        )
+      ) {
+        state.currentConversationType = "direct";
         await hydrateDirectMessage();
       } else if (state.currentPage === "care-team") {
         await hydrateCareTeam();
@@ -598,6 +607,7 @@ function resetState() {
   state.conversations = [];
   state.classmates = [];
   state.currentConversationId = null;
+  state.currentConversationType = null;
   state.showNewMessage = false;
   state.replyToMessage = null;
   state.careSearchQuery = "";
@@ -4064,6 +4074,9 @@ function renderDirectConversationList() {
 }
 
 async function hydrateMessages() {
+  state.currentConversationType = null;
+  state.currentConversationId = null;
+
   await loadCareConversations();
   await loadClassmates();
 
@@ -4424,9 +4437,14 @@ async function refreshCurrentConversation() {
     (item) => item.id === state.currentConversationId
   );
 
-  if (conversation?.type === "direct") {
+  if (
+    state.currentConversationType === "direct" ||
+    conversation?.type === "direct"
+  ) {
+    state.currentConversationType = "direct";
     await hydrateDirectMessage();
   } else {
+    state.currentConversationType = "group";
     await hydrateCareTeam();
   }
 }
@@ -4434,10 +4452,15 @@ async function refreshCurrentConversation() {
 async function openConversation(conversationId) {
   state.currentConversationId = conversationId;
   state.showNewMessage = false;
+
   const conversation = state.conversations.find(
     (item) => item.id === conversationId
   );
-  if (conversation?.type === "direct") {
+
+  state.currentConversationType =
+    conversation?.type === "direct" ? "direct" : "group";
+
+  if (state.currentConversationType === "direct") {
     await hydrateDirectMessage();
   } else {
     await hydrateCareTeam();
@@ -4537,6 +4560,8 @@ async function hydrateDirectMessage() {
 async function startDirectMessage(targetUserId) {
   if (!supabaseClient || !state.user || !targetUserId) return;
 
+  state.currentConversationType = "direct";
+
   const existing = state.conversations.find((conversation) =>
     conversation.type === "direct" &&
     conversation.members?.some((member) => member.user_id === state.user.id) &&
@@ -4545,6 +4570,7 @@ async function startDirectMessage(targetUserId) {
 
   if (existing) {
     state.currentConversationId = existing.id;
+    state.currentConversationType = "direct";
     state.showNewMessage = false;
     state.currentPage = "messages";
     renderAppShell();
@@ -4584,6 +4610,7 @@ async function startDirectMessage(targetUserId) {
   }
 
   state.currentConversationId = conversation.id;
+  state.currentConversationType = "direct";
   state.showNewMessage = false;
   state.currentPage = "messages";
 
@@ -4593,6 +4620,7 @@ async function startDirectMessage(targetUserId) {
 }
 
 async function hydrateCareTeam() {
+  state.currentConversationType = "group";
   await loadCareConversations();
   await loadClassmates();
 
@@ -4746,23 +4774,23 @@ async function handleCareMessageSubmit(
 
   if (!content) return;
 
-  await sendCareMessage(
-    content
-  );
+  const sent = await sendCareMessage(content);
 
-  if (input) {
+  if (sent && input) {
     input.value = "";
   }
 }
 
 async function sendCareMessage(content) {
   if (!supabaseClient || !state.user || !state.currentConversationId)
-    return;
+    return false;
 
   const conversation = state.conversations.find(
     (item) => item.id === state.currentConversationId
   );
-  const isDirect = conversation?.type === "direct";
+  const isDirect =
+    state.currentConversationType === "direct" ||
+    conversation?.type === "direct";
 
   const payload = {
     user_id: state.user.id,
@@ -4799,7 +4827,7 @@ async function sendCareMessage(content) {
       result.error.message || "Unable to send message.",
       "error"
     );
-    return;
+    return false;
   }
 
   state.replyToMessage = null;
@@ -4817,6 +4845,8 @@ async function sendCareMessage(content) {
       chat.scrollTop = chat.scrollHeight;
     }
   });
+
+  return true;
 }
 
 async function editCareMessage(
