@@ -366,7 +366,7 @@ function renderAdminAssignmentsControl() {
 function renderAdminCalendarControl() {
   return '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">📅</span><h2>Calendar Management</h2></div></div>'+
     '<p class="admin-note">Create an event for a specific student or the administrator account. Existing calendar visibility rules still apply.</p>'+
-    '<div class="admin-form-stack"><input id="admin-event-title" class="text-input" placeholder="Event title"><input id="admin-event-date" class="text-input" type="date"><input id="admin-event-location" class="text-input" placeholder="Location (optional)"><select id="admin-event-type" class="text-input"><option value="class">Class</option><option value="test">Test</option><option value="clinical">Clinical</option><option value="assignment">Assignment</option><option value="study">Study</option><option value="other">Other</option></select><button id="admin-create-event" class="primary-button">Create Event</button></div>'+
+    '<div class="admin-form-stack"><input id="admin-event-title" class="text-input" placeholder="Event title"><input id="admin-event-date" class="text-input" type="date"><input id="admin-event-location" class="text-input" placeholder="Location (optional)"><label class="admin-check-row"><input id="admin-event-classwide" type="checkbox" checked><span>Show this event to the whole class</span></label><select id="admin-event-type" class="text-input"><option value="class">Class</option><option value="test">Test</option><option value="clinical">Clinical</option><option value="assignment">Assignment</option><option value="study">Study</option><option value="other">Other</option></select><button id="admin-create-event" class="primary-button">Create Event</button></div>'+
     '<div class="admin-list">'+((state.adminCalendarEvents||[]).slice(0,100).map(e=>'<div class="admin-list-row"><div><strong>'+escapeHtml(e.title||"Event")+'</strong><small>'+escapeHtml(e.start_time||"")+' · '+escapeHtml(e.location||"")+' · Owner: '+escapeHtml(adminStudentName(e.user_id||e.created_by))+'</small></div><button class="danger-button small-button" data-admin-delete-event="'+e.id+'">Delete</button></div>').join('')||'<div class="empty-state compact">No events found.</div>')+'</div></section>';
 }
 
@@ -427,8 +427,9 @@ async function adminCreateEvent() {
   const date=$("#admin-event-date")?.value;
   const location=$("#admin-event-location")?.value.trim() || null;
   const eventType=$("#admin-event-type")?.value || "class";
+  const classWide=!!$("#admin-event-classwide")?.checked;
   if(!title||!date)return showToast("Enter an event title and date.","error");
-  const payload={user_id:state.user.id,title,description:null,start_time:`${date}T12:00:00`,location,event_type:eventType,created_by:state.user.id};
+  const payload={user_id:classWide?null:state.user.id,title,description:null,start_time:`${date}T12:00:00`,location,event_type:eventType,created_by:state.user.id,is_class_wide:classWide};
   const {data,error}=await supabaseClient.from("calendar_events").insert(payload).select("*").single();
   if(error)return showToast(error.message,"error");
   await adminAudit("admin_create_calendar_event","calendar_event",data.id,{title,event_type:eventType,start_time:payload.start_time});
