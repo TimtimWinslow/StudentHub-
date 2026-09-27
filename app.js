@@ -165,6 +165,10 @@ function getGreeting() {
   return "Good evening";
 }
 
+function getUserRole() {
+  return state.isAdmin ? "Administrator" : "Student";
+}
+
 function getDisplayName() {
   return (
     state.profile?.display_name ||
@@ -1991,7 +1995,7 @@ function renderSidebar() {
               )}
             </strong>
 
-            <span>Student</span>
+            <span>${escapeHtml(getUserRole())}</span>
           </div>
 
         </div>
@@ -6837,7 +6841,7 @@ function renderProfile() {
             </div>
             <h2>${escapeHtml(name)}</h2>
             <p class="profile-preview-email">${escapeHtml(state.user?.email || "")}</p>
-            <p class="profile-preview-role">Student</p>
+            <p class="profile-preview-role">${escapeHtml(getUserRole())}</p>
             <div class="profile-preview-bio">
               ${bio ? escapeHtml(bio) : "Add a short bio so your classmates can get to know you."}
             </div>
