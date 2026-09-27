@@ -2108,6 +2108,8 @@ function renderTopbar() {
             )}
           </span>
 
+          <span class="account-role-badge role-badge ${state.isAdmin ? "admin" : "student"}">${state.isAdmin ? "🛡️ Admin" : "🎓 Student"}</span>
+
           <span class="account-chevron">
             ⌄
           </span>
@@ -2121,6 +2123,11 @@ function renderTopbar() {
         id="account-menu"
         hidden
       >
+
+        <div class="account-menu-role">
+          <span class="account-menu-role-label">Signed in as</span>
+          <span class="role-badge ${state.isAdmin ? "admin" : "student"}">${state.isAdmin ? "🛡️ Administrator" : "🎓 Student"}</span>
+        </div>
 
         <button data-account-action="profile">
           👤 My Profile
