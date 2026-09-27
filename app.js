@@ -3717,6 +3717,44 @@ async function loadCareConversations() {
     }
   }
 
+  // Last-resort persistence fallback: if a private message was sent,
+  // the message row itself gives us the conversation ID. This makes the
+  // Messages list resilient even if membership rows are temporarily omitted
+  // from a query or cached auth/RLS state.
+  const { data: sentMessages, error: sentMessagesError } = await supabaseClient
+    .from("messages")
+    .select("conversation_id, created_at")
+    .eq("sender_id", state.user.id)
+    .not("conversation_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (!sentMessagesError && sentMessages?.length) {
+    const sentDirectIds = [
+      ...new Set(sentMessages.map((row) => row.conversation_id).filter(Boolean))
+    ];
+
+    const missingIds = sentDirectIds.filter(
+      (id) =>
+        !conversations.some(
+          (conversation) => conversation.id === id
+        )
+    );
+
+    if (missingIds.length) {
+      const { data: sentDirectConversations, error: sentDirectError } =
+        await supabaseClient
+          .from("conversations")
+          .select("*")
+          .eq("type", "direct")
+          .in("id", missingIds);
+
+      if (!sentDirectError && sentDirectConversations?.length) {
+        conversations.push(...sentDirectConversations);
+      }
+    }
+  }
+
   // The Care Team is always discoverable, even before a newly registered
   // student has opened it for the first time.
   const { data: groupConversation, error: groupError } = await supabaseClient
