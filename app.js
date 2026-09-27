@@ -1995,7 +1995,7 @@ function renderSidebar() {
               )}
             </strong>
 
-            <span>${escapeHtml(getUserRole())}</span>
+            <span class="role-badge ${state.isAdmin ? "admin" : "student"}">${state.isAdmin ? "🛡️ Administrator" : "🎓 Student"}</span>
           </div>
 
         </div>
@@ -6841,7 +6841,7 @@ function renderProfile() {
             </div>
             <h2>${escapeHtml(name)}</h2>
             <p class="profile-preview-email">${escapeHtml(state.user?.email || "")}</p>
-            <p class="profile-preview-role">${escapeHtml(getUserRole())}</p>
+            <p class="profile-preview-role"><span class="role-badge ${state.isAdmin ? "admin" : "student"}">${state.isAdmin ? "🛡️ Administrator" : "🎓 Student"}</span></p>
             <div class="profile-preview-bio">
               ${bio ? escapeHtml(bio) : "Add a short bio so your classmates can get to know you."}
             </div>
