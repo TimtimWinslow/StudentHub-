@@ -4193,12 +4193,12 @@ function renderCareMembers() {
   if (state.user && !members.some((m) => m.id === state.user.id)) members.unshift(me);
   return members.map((member) => {
     const name = member.display_name || member.full_name || "Student";
-    return \`
+    return `
       <div class="care-member-row">
-        <div class="avatar small">${member.avatar_url ? \`<img src="${escapeHtml(member.avatar_url)}" alt="" />\` : escapeHtml(getInitials(name))}</div>
+        <div class="avatar small">${member.avatar_url ? `<img src="${escapeHtml(member.avatar_url)}" alt="" />` : escapeHtml(getInitials(name))}</div>
         <div class="care-member-info"><strong>${escapeHtml(name)}${member.id === state.user?.id ? " (You)" : ""}</strong><span>${member.id === state.user?.id ? "You" : renderPresenceBadge(member.id)}</span></div>
       </div>
-    \`;
+    `;
   }).join("");
 }
 
@@ -4253,7 +4253,7 @@ function renderPinnedMessageStrip() {
         ${pinned.map((item) => {
           const message = state.careMessages.find((m) => m.id === item.message_id);
           const value = message?.content || message?.message || "Pinned message";
-          return \`<button type="button" class="care-pinned-item" data-jump-message="${escapeHtml(item.message_id)}">${escapeHtml(value.slice(0, 100))}${value.length > 100 ? "…" : ""}</button>\`;
+          return `<button type="button" class="care-pinned-item" data-jump-message="${escapeHtml(item.message_id)}">${escapeHtml(value.slice(0, 100))}${value.length > 100 ? "…" : ""}</button>`;
         }).join("")}
       </div>
     </div>
@@ -4268,27 +4268,10 @@ function renderCareMessages() {
       <div class="empty-state">
         <div class="empty-icon">💬</div>
         <h3>No messages yet</h3>
-        <p>
-          Start the conversation.
-        </p>
+        <p>Start the conversation.</p>
       </div>
     `;
   }
-
-  return `
-    <div class="care-message-list">
-
-      ${state.careMessages
-        .map((message) =>
-          renderCareMessage(
-            message
-          )
-        )
-        .join("")}
-
-    </div>
-  `;
-}
 
   if (!filteredMessages.length) {
     return `
@@ -4306,7 +4289,6 @@ function renderCareMessages() {
     </div>
   `;
 }
-
 function renderCareMessage(message) {
   const profile =
     message.profiles || {};
@@ -4379,12 +4361,12 @@ function renderCareMessage(message) {
           const originalProfile = original.profiles || {};
           const originalName = originalProfile.display_name || originalProfile.full_name || "Student";
           const originalText = original.content || original.message || "";
-          return \`
+          return `
             <button type="button" class="message-reply-preview" data-jump-message="${escapeHtml(original.id)}">
               <strong>↩ Replying to ${escapeHtml(originalName)}</strong>
               <span>${escapeHtml(originalText.slice(0, 140))}${originalText.length > 140 ? "…" : ""}</span>
             </button>
-          \`;
+          `;
         })() : ""}
 
         <div class="care-message-content">
