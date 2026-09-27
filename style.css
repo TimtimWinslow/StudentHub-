@@ -3147,6 +3147,11 @@ img {
   opacity: .7;
 }
 
+.assignment-count {
+  color: var(--text-muted, #9aa4b2);
+  font-size: .8rem;
+}
+
 .assignment-list {
   display: flex;
   flex-direction: column;
@@ -3161,10 +3166,20 @@ img {
   padding: 1rem;
   border: 1px solid rgba(128,128,128,.22);
   border-radius: 14px;
+  transition: border-color .18s ease, transform .18s ease, background .18s ease;
+}
+
+.assignment-item:hover {
+  border-color: rgba(18,215,232,.28);
+  background: rgba(255,255,255,.018);
 }
 
 .assignment-overdue {
-  border-left: 4px solid currentColor;
+  border-left: 4px solid #ef4444;
+}
+
+.assignment-completed {
+  opacity: .78;
 }
 
 .assignment-main {
@@ -3186,6 +3201,7 @@ img {
 .assignment-main p {
   margin: .4rem 0;
   opacity: .75;
+  line-height: 1.45;
 }
 
 .assignment-meta {
@@ -3196,18 +3212,105 @@ img {
   opacity: .75;
 }
 
+.assignment-meta-overdue {
+  color: #f87171;
+  font-weight: 800;
+  opacity: 1;
+}
+
 .assignment-status {
   display: inline-flex;
+  align-items: center;
+  gap: .25rem;
   padding: .25rem .55rem;
   border-radius: 999px;
   font-size: .75rem;
+  font-weight: 750;
   border: 1px solid rgba(128,128,128,.25);
+}
+
+.assignment-status.status-not_started {
+  color: var(--text-muted, #9aa4b2);
+}
+
+.assignment-status.status-in_progress {
+  color: #22d3ee;
+  border-color: rgba(34,211,238,.28);
+  background: rgba(34,211,238,.08);
+}
+
+.assignment-status.status-completed {
+  color: #4ade80;
+  border-color: rgba(74,222,128,.28);
+  background: rgba(74,222,128,.08);
 }
 
 .assignment-actions {
   display: flex;
   gap: .5rem;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.assignment-actions button {
+  white-space: nowrap;
+}
+
+.assignment-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0,0,0,.58);
+  backdrop-filter: blur(8px);
+}
+
+.assignment-modal {
+  width: min(100%, 560px);
+  max-height: min(90vh, 760px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid rgba(18,215,232,.2);
+  border-radius: 18px;
+  background: var(--card, #102b42);
+  box-shadow: 0 24px 80px rgba(0,0,0,.5);
+}
+
+.assignment-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.assignment-modal-header h2 {
+  margin: 2px 0 0;
+}
+
+.assignment-form {
+  display: grid;
+  gap: 10px;
+}
+
+.assignment-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.assignment-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.assignment-modal-actions button {
+  min-width: 120px;
 }
 
 @media (max-width: 700px) {
@@ -3222,13 +3325,36 @@ img {
 
   .assignment-actions {
     width: 100%;
+    justify-content: stretch;
   }
 
   .assignment-actions button {
     flex: 1;
   }
-}
 
+  .assignment-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assignment-modal-backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .assignment-modal {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 18px 18px 12px 12px;
+  }
+
+  .assignment-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .assignment-modal-actions button {
+    width: 100%;
+  }
+}
 
 /* =========================================================
    CALENDAR
