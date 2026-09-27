@@ -67,6 +67,8 @@ const state = {
   searchResults: [],
   replyToMessage: null,
   careSearchQuery: "",
+  careUnreadCount: 0,
+  careReadAt: null,
 
   flashcardDecks: [],
   currentDeck: null,
@@ -592,6 +594,8 @@ function resetState() {
   state.showNewMessage = false;
   state.replyToMessage = null;
   state.careSearchQuery = "";
+  state.careUnreadCount = 0;
+  state.careReadAt = null;
 
   state.flashcardDecks = [];
   state.currentDeck = null;
@@ -3741,6 +3745,35 @@ async function loadClassmates() {
   return state.classmates;
 }
 
+async function markConversationRead() {
+  if (!supabaseClient || !state.user || !state.currentConversationId) return;
+  const now = new Date().toISOString();
+  state.careReadAt = now;
+  state.careUnreadCount = 0;
+  await supabaseClient.from("message_reads").upsert({
+    conversation_id: state.currentConversationId,
+    user_id: state.user.id,
+    last_read_at: now
+  }, { onConflict: "conversation_id,user_id" });
+}
+
+function calculateCareUnread() {
+  const readAt = state.careReadAt ? new Date(state.careReadAt).getTime() : 0;
+  state.careUnreadCount = state.careMessages.filter((message) => {
+    const sender = message.sender_id || message.user_id;
+    return sender !== state.user?.id && new Date(message.created_at).getTime() > readAt;
+  }).length;
+  return state.careUnreadCount;
+}
+
+async function loadCareReadState() {
+  if (!supabaseClient || !state.user || !state.currentConversationId) return null;
+  const { data } = await supabaseClient.from("message_reads").select("last_read_at")
+    .eq("conversation_id", state.currentConversationId).eq("user_id", state.user.id).maybeSingle();
+  state.careReadAt = data?.last_read_at || null;
+  return state.careReadAt;
+}
+
 async function loadCareMessages() {
   if (!supabaseClient || !state.currentConversationId) {
     state.careMessages = [];
@@ -3917,7 +3950,7 @@ function renderCareTeam() {
             <input id="care-message-search" class="text-input" type="search" value="${escapeHtml(state.careSearchQuery)}" placeholder="Search messages..." autocomplete="off" />
             ${state.careSearchQuery ? '<button type="button" id="care-search-clear" class="secondary-button small-button">Clear</button>' : ""}
           </div>
-          <span class="care-message-count">${state.careMessages.length} message${state.careMessages.length === 1 ? "" : "s"}</span>
+          <span class="care-message-count">${state.careMessages.length} message${state.careMessages.length === 1 ? "" : "s"}${state.careUnreadCount ? " · " + state.careUnreadCount + " unread" : ""}</span>
         </div>
         ${renderPinnedMessageStrip()}
         <div class="care-team-messages" id="care-team-messages">
@@ -4365,6 +4398,7 @@ function renderCareMessage(message) {
         <div class="care-message-actions">
           <div class="reaction-picker">${renderMessageReactions(message.id)}</div>
           <button type="button" data-reply-message="${escapeHtml(message.id)}">↩ Reply</button>
+          <button type="button" data-report-message="${escapeHtml(message.id)}">⚑ Report</button>
 
           <button
             data-pin-message="${escapeHtml(message.id)}"
@@ -4557,8 +4591,11 @@ async function hydrateCareTeam() {
   await Promise.all([
     loadCareMessages(),
     loadPinnedMessages(),
-    loadMessageReactions()
+    loadMessageReactions(),
+    loadCareReadState()
   ]);
+  calculateCareUnread();
+  await markConversationRead();
 
   const container = $("#page-container");
   if (!container) return;
@@ -4637,6 +4674,10 @@ async function hydrateCareTeam() {
     button.addEventListener("click", () =>
       togglePinnedMessage(button.dataset.pinMessage)
     );
+  });
+
+  document.querySelectorAll("[data-report-message]").forEach((button) => {
+    button.addEventListener("click", () => reportCareMessage(button.dataset.reportMessage));
   });
 
   document.querySelectorAll("[data-reply-message]").forEach((button) => {
@@ -4943,6 +4984,24 @@ function jumpToMessage(messageId) {
   target.scrollIntoView({ behavior: "smooth", block: "center" });
   target.classList.add("message-highlight");
   setTimeout(() => target.classList.remove("message-highlight"), 1400);
+}
+
+async function reportCareMessage(messageId) {
+  if (!supabaseClient || !state.user) return;
+  const message = state.careMessages.find((item) => item.id === messageId);
+  if (!message) return;
+  const reason = prompt("Why are you reporting this message?", "Inappropriate or concerning content");
+  if (!reason || !reason.trim()) return;
+  const { error } = await supabaseClient.from("message_reports").insert({
+    message_id: messageId,
+    reporter_id: state.user.id,
+    reason: reason.trim()
+  });
+  if (error) {
+    showMessage(error.message || "Unable to submit report.", "error");
+    return;
+  }
+  showMessage("Report submitted to the admin team.");
 }
 
 async function deleteCareMessage(
