@@ -1978,6 +1978,8 @@ function renderSidebar() {
 
       </nav>
 
+      <div id="studenthub-install-slot" class="sidebar-install-slot"></div>
+
       <div class="sidebar-footer">
 
         <div class="sidebar-user">
@@ -2264,6 +2266,8 @@ function renderAppShell() {
   `;
 
   attachShellEvents();
+
+  window.dispatchEvent(new Event("studenthub-shell-ready"));
 }
 
 function attachShellEvents() {
