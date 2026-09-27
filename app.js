@@ -3067,100 +3067,411 @@ async function addCalendarEvent() {
 async function loadAssignments() {
   if (!supabaseClient || !state.user) return [];
   const { data, error } = await supabaseClient
-    .from("assignments").select("*").eq("user_id", state.user.id)
+    .from("assignments")
+    .select("*")
+    .eq("user_id", state.user.id)
     .order("due_date", { ascending: true, nullsFirst: false });
-  if (error) { console.error("Assignments load error:", error); state.assignments=[]; return []; }
+
+  if (error) {
+    console.error("Assignments load error:", error);
+    state.assignments = [];
+    return [];
+  }
+
   state.assignments = data || [];
   return state.assignments;
 }
 
 function assignmentStatusLabel(status) {
-  return ({not_started:"Not Started",in_progress:"In Progress",completed:"Completed"})[status] || "Not Started";
+  return ({
+    not_started: "Not Started",
+    in_progress: "In Progress",
+    completed: "Completed"
+  })[status] || "Not Started";
+}
+
+function assignmentStatusIcon(status) {
+  return ({
+    not_started: "○",
+    in_progress: "◐",
+    completed: "✓"
+  })[status] || "○";
+}
+
+function assignmentPriorityLabel(priority) {
+  return ({
+    low: "Low",
+    normal: "Normal",
+    high: "High"
+  })[priority] || "Normal";
+}
+
+function assignmentIsOverdue(item) {
+  if (!item?.due_date || item.status === "completed") return false;
+  const due = new Date(`${item.due_date}T23:59:59`);
+  return due.getTime() < Date.now();
 }
 
 function renderAssignments() {
-  const now = new Date();
   const active = state.assignments.filter(a => a.status !== "completed");
   const completed = state.assignments.filter(a => a.status === "completed");
-  const overdue = active.filter(a => a.due_date && new Date(a.due_date) < now);
-  return `<section class="page"><div class="page-header"><div><p class="eyebrow">STUDENTHUB</p><h1>Assignments</h1><p>Keep track of classwork, due dates, and what still needs to be finished.</p></div><button class="primary-button" id="add-assignment-button" type="button">+ Add Assignment</button></div><div class="assignment-summary-grid"><div class="panel assignment-stat"><strong>${active.length}</strong><span>Active</span></div><div class="panel assignment-stat"><strong>${completed.length}</strong><span>Completed</span></div><div class="panel assignment-stat"><strong>${overdue.length}</strong><span>Overdue</span></div></div><div class="panel"><div class="panel-header"><div><span class="panel-icon">📝</span><h2>My Assignments</h2></div></div>${renderAssignmentList()}</div><div class="assignment-modal-backdrop" id="assignment-modal" hidden><div class="assignment-modal" role="dialog" aria-modal="true"><div class="assignment-modal-header"><div><p class="eyebrow">NEW ASSIGNMENT</p><h2>Add Assignment</h2></div><button class="icon-button" id="close-assignment-modal" type="button" aria-label="Close">×</button></div><form id="assignment-form" class="assignment-form"><label class="field-label" for="assignment-title">Assignment name</label><input id="assignment-title" class="text-input" type="text" maxlength="200" placeholder="e.g. Chapter 6 worksheet" required /><label class="field-label" for="assignment-description">Description</label><textarea id="assignment-description" class="text-input" rows="3" maxlength="2000" placeholder="Optional details"></textarea><div class="assignment-form-grid"><div><label class="field-label" for="assignment-due-date">Due date</label><input id="assignment-due-date" class="text-input" type="date" /></div><div><label class="field-label" for="assignment-priority">Priority</label><select id="assignment-priority" class="text-input"><option value="low">Low</option><option value="normal" selected>Normal</option><option value="high">High</option></select></div></div><div id="assignment-form-message" class="form-error"></div><div class="assignment-modal-actions"><button class="secondary-button" id="cancel-assignment-modal" type="button">Cancel</button><button class="primary-button" id="save-assignment-button" type="submit">Save Assignment</button></div></form></div></div></section>`;
+  const overdue = active.filter(assignmentIsOverdue);
+
+  return `
+    <section class="page">
+      <div class="page-header">
+        <div>
+          <p class="eyebrow">STUDENTHUB</p>
+          <h1>Assignments</h1>
+          <p>Keep track of classwork, due dates, and what still needs to be finished.</p>
+        </div>
+        <button class="primary-button" id="add-assignment-button" type="button">+ Add Assignment</button>
+      </div>
+
+      <div class="assignment-summary-grid">
+        <div class="panel assignment-stat">
+          <strong>${active.length}</strong>
+          <span>Active</span>
+        </div>
+        <div class="panel assignment-stat">
+          <strong>${completed.length}</strong>
+          <span>Completed</span>
+        </div>
+        <div class="panel assignment-stat">
+          <strong>${overdue.length}</strong>
+          <span>Overdue</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <span class="panel-icon">📝</span>
+            <h2>My Assignments</h2>
+          </div>
+          <span class="assignment-count">${state.assignments.length} total</span>
+        </div>
+        ${renderAssignmentList()}
+      </div>
+
+      <div class="assignment-modal-backdrop" id="assignment-modal" hidden>
+        <div class="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title">
+          <div class="assignment-modal-header">
+            <div>
+              <p class="eyebrow" id="assignment-modal-eyebrow">NEW ASSIGNMENT</p>
+              <h2 id="assignment-modal-title">Add Assignment</h2>
+            </div>
+            <button class="icon-button" id="close-assignment-modal" type="button" aria-label="Close">×</button>
+          </div>
+
+          <form id="assignment-form" class="assignment-form">
+            <input id="assignment-edit-id" type="hidden" />
+
+            <label class="field-label" for="assignment-title">Assignment name</label>
+            <input id="assignment-title" class="text-input" type="text" maxlength="200" placeholder="e.g. Chapter 6 worksheet" required />
+
+            <label class="field-label" for="assignment-description">Description</label>
+            <textarea id="assignment-description" class="text-input" rows="3" maxlength="2000" placeholder="Optional details"></textarea>
+
+            <div class="assignment-form-grid">
+              <div>
+                <label class="field-label" for="assignment-due-date">Due date</label>
+                <input id="assignment-due-date" class="text-input" type="date" />
+              </div>
+              <div>
+                <label class="field-label" for="assignment-priority">Priority</label>
+                <select id="assignment-priority" class="text-input">
+                  <option value="low">Low</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="assignment-status-field" hidden>
+              <label class="field-label" for="assignment-status">Status</label>
+              <select id="assignment-status" class="text-input">
+                <option value="not_started">Not Started</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div id="assignment-form-message" class="form-error"></div>
+
+            <div class="assignment-modal-actions">
+              <button class="secondary-button" id="cancel-assignment-modal" type="button">Cancel</button>
+              <button class="primary-button" id="save-assignment-button" type="submit">Save Assignment</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderAssignmentList() {
-  if (!state.assignments.length) return `<div class="empty-state"><div class="empty-icon">📝</div><h3>No assignments yet</h3><p>Add your first class assignment.</p></div>`;
-  const now = new Date();
-  return `<div class="assignment-list">${state.assignments.map(a => {
-    const overdue = a.status !== "completed" && a.due_date && new Date(a.due_date) < now;
-    return `<article class="assignment-item ${overdue ? "assignment-overdue" : ""}"><div class="assignment-main"><div class="assignment-title-row"><h3>${escapeHtml(a.title || "Assignment")}</h3><span class="assignment-status">${escapeHtml(assignmentStatusLabel(a.status))}</span></div><p>${escapeHtml(a.description || "No description")}</p><div class="assignment-meta"><span>📅 ${a.due_date ? escapeHtml(formatDate(a.due_date)) : "No due date"}</span>${a.priority ? `<span>⚑ ${escapeHtml(a.priority)}</span>` : ""}</div></div><div class="assignment-actions"><button class="secondary-button" data-assignment-status="${escapeHtml(a.id)}">Status</button><button class="danger-action" data-assignment-delete="${escapeHtml(a.id)}">Delete</button></div></article>`;
-  }).join("")}</div>`;
+  if (!state.assignments.length) {
+    return `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h3>No assignments yet</h3>
+        <p>Add your first class assignment to start tracking your work.</p>
+        <button class="secondary-button" type="button" id="empty-add-assignment">+ Add Assignment</button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="assignment-list">
+      ${state.assignments.map(item => {
+        const overdue = assignmentIsOverdue(item);
+        const status = item.status || "not_started";
+
+        return `
+          <article class="assignment-item ${overdue ? "assignment-overdue" : ""} ${status === "completed" ? "assignment-completed" : ""}">
+            <div class="assignment-main">
+              <div class="assignment-title-row">
+                <h3>${escapeHtml(item.title || "Assignment")}</h3>
+                <span class="assignment-status status-${escapeHtml(status)}">
+                  ${assignmentStatusIcon(status)} ${escapeHtml(assignmentStatusLabel(status))}
+                </span>
+              </div>
+
+              <p>${escapeHtml(item.description || "No description")}</p>
+
+              <div class="assignment-meta">
+                <span class="${overdue ? "assignment-meta-overdue" : ""}">
+                  📅 ${item.due_date ? escapeHtml(formatDate(item.due_date)) : "No due date"}
+                  ${overdue ? " • Overdue" : ""}
+                </span>
+                <span>⚑ ${escapeHtml(assignmentPriorityLabel(item.priority))}</span>
+              </div>
+            </div>
+
+            <div class="assignment-actions">
+              <button class="secondary-button" data-assignment-status="${escapeHtml(item.id)}" type="button">Change Status</button>
+              <button class="secondary-button" data-assignment-edit="${escapeHtml(item.id)}" type="button">Edit</button>
+              <button class="danger-action" data-assignment-delete="${escapeHtml(item.id)}" type="button">Delete</button>
+            </div>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
 }
 
-function openAssignmentModal() {
-  const modal = $("#assignment-modal"); if (!modal) return;
-  modal.hidden = false; document.body.classList.add("modal-open");
+function openAssignmentModal(id = null) {
+  const modal = $("#assignment-modal");
+  if (!modal) return;
+
+  const item = id
+    ? state.assignments.find(a => String(a.id) === String(id))
+    : null;
+
+  $("#assignment-edit-id").value = item?.id || "";
+  $("#assignment-title").value = item?.title || "";
+  $("#assignment-description").value = item?.description || "";
+  $("#assignment-due-date").value = item?.due_date || "";
+  $("#assignment-priority").value = item?.priority || "normal";
+  $("#assignment-status").value = item?.status || "not_started";
+
+  const editing = Boolean(item);
+  $("#assignment-modal-eyebrow").textContent = editing ? "EDIT ASSIGNMENT" : "NEW ASSIGNMENT";
+  $("#assignment-modal-title").textContent = editing ? "Edit Assignment" : "Add Assignment";
+  $("#save-assignment-button").textContent = editing ? "Save Changes" : "Save Assignment";
+  $("#assignment-status-field").hidden = !editing;
+
+  const message = $("#assignment-form-message");
+  if (message) {
+    message.className = "form-error";
+    message.textContent = "";
+  }
+
+  modal.hidden = false;
+  document.body.classList.add("modal-open");
   setTimeout(() => $("#assignment-title")?.focus(), 0);
 }
+
 function closeAssignmentModal() {
-  const modal = $("#assignment-modal"); if (!modal) return;
-  modal.hidden = true; document.body.classList.remove("modal-open");
+  const modal = $("#assignment-modal");
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove("modal-open");
 }
+
 async function saveAssignment(event) {
   event.preventDefault();
   if (!supabaseClient || !state.user) return;
+
+  const id = $("#assignment-edit-id")?.value || null;
   const title = $("#assignment-title")?.value.trim();
   const description = $("#assignment-description")?.value.trim() || null;
   const dueDate = $("#assignment-due-date")?.value || null;
   const priority = $("#assignment-priority")?.value || "normal";
+  const status = $("#assignment-status")?.value || "not_started";
   const message = $("#assignment-form-message");
   const button = $("#save-assignment-button");
-  if (message) { message.className = "form-error"; message.textContent = ""; }
-  if (!title) { if (message) message.textContent = "Enter an assignment name."; return; }
-  if (!["low","normal","high"].includes(priority)) { if (message) message.textContent = "Choose a valid priority."; return; }
-  if (button) { button.disabled = true; button.textContent = "Saving..."; }
+
+  if (message) {
+    message.className = "form-error";
+    message.textContent = "";
+  }
+
+  if (!title) {
+    if (message) message.textContent = "Enter an assignment name.";
+    return;
+  }
+
+  if (!["low", "normal", "high"].includes(priority)) {
+    if (message) message.textContent = "Choose a valid priority.";
+    return;
+  }
+
+  if (!["not_started", "in_progress", "completed"].includes(status)) {
+    if (message) message.textContent = "Choose a valid status.";
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = id ? "Saving..." : "Adding...";
+  }
+
   try {
-    const { data, error } = await supabaseClient.from("assignments").insert({user_id: state.user.id,title,description,due_date: dueDate,priority,status:"not_started"}).select("*").single();
-    if (error) throw error;
-    if (!data?.id) throw new Error("Assignment was not returned after saving.");
-    state.assignments = [...state.assignments, data].sort((x,y) => !x.due_date ? 1 : !y.due_date ? -1 : new Date(x.due_date)-new Date(y.due_date));
-    closeAssignmentModal(); showMessage("Assignment saved."); await navigate("assignments");
+    const values = {
+      title,
+      description,
+      due_date: dueDate,
+      priority,
+      status
+    };
+
+    let data;
+
+    if (id) {
+      const result = await supabaseClient
+        .from("assignments")
+        .update(values)
+        .eq("id", id)
+        .eq("user_id", state.user.id)
+        .select("*")
+        .single();
+
+      if (result.error) throw result.error;
+      data = result.data;
+    } else {
+      const result = await supabaseClient
+        .from("assignments")
+        .insert({
+          user_id: state.user.id,
+          ...values
+        })
+        .select("*")
+        .single();
+
+      if (result.error) throw result.error;
+      data = result.data;
+    }
+
+    if (!data?.id) {
+      throw new Error("Assignment was not returned after saving.");
+    }
+
+    const existingIndex = state.assignments.findIndex(
+      item => String(item.id) === String(data.id)
+    );
+
+    if (existingIndex >= 0) {
+      state.assignments = state.assignments.map(item =>
+        String(item.id) === String(data.id) ? data : item
+      );
+    } else {
+      state.assignments = [...state.assignments, data];
+    }
+
+    closeAssignmentModal();
+    showMessage(id ? "Assignment updated." : "Assignment saved.");
+    await navigate("assignments");
   } catch (error) {
     console.error("Assignment save error:", error);
-    if (message) message.textContent = error?.message || "Unable to save assignment. Check Supabase permissions.";
+    if (message) {
+      message.className = "form-error";
+      message.textContent = error?.message || "Unable to save assignment. Check Supabase permissions.";
+    }
   } finally {
-    if (button) { button.disabled = false; button.textContent = "Save Assignment"; }
+    if (button) {
+      button.disabled = false;
+      button.textContent = id ? "Save Changes" : "Save Assignment";
+    }
   }
 }
 
 async function changeAssignmentStatus(id) {
   const item = state.assignments.find(a => String(a.id) === String(id));
   if (!item) return;
-  const choice = prompt("Status: not_started, in_progress, or completed", item.status || "not_started");
-  if (!choice) return;
-  const status = choice.trim().toLowerCase().replace(/\s+/g, "_");
-  if (!["not_started","in_progress","completed"].includes(status)) { showMessage("Invalid status.", "error"); return; }
-  const { error } = await supabaseClient.from("assignments").update({status}).eq("id", id).eq("user_id", state.user.id);
-  if (error) { showMessage(error.message || "Unable to update assignment.", "error"); return; }
-  await navigate("assignments");
+
+  openAssignmentModal(id);
 }
 
 async function deleteAssignment(id) {
-  if (!confirm("Delete this assignment?")) return;
-  const { error } = await supabaseClient.from("assignments").delete().eq("id", id).eq("user_id", state.user.id);
-  if (error) { showMessage(error.message || "Unable to delete assignment.", "error"); return; }
-  showMessage("Assignment deleted."); await navigate("assignments");
+  const item = state.assignments.find(a => String(a.id) === String(id));
+  if (!item) return;
+
+  if (!confirm(`Delete "${item.title || "this assignment"}"? This cannot be undone.`)) {
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("assignments")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", state.user.id);
+
+  if (error) {
+    showMessage(error.message || "Unable to delete assignment.", "error");
+    return;
+  }
+
+  state.assignments = state.assignments.filter(
+    assignment => String(assignment.id) !== String(id)
+  );
+
+  showMessage("Assignment deleted.");
+  await navigate("assignments");
 }
 
 async function hydrateAssignments() {
   await loadAssignments();
-  const container = $("#page-container"); if (!container) return;
+
+  const container = $("#page-container");
+  if (!container) return;
+
   container.innerHTML = renderAssignments();
-  $("#add-assignment-button")?.addEventListener("click", openAssignmentModal);
+
+  $("#add-assignment-button")?.addEventListener("click", () => openAssignmentModal());
+  $("#empty-add-assignment")?.addEventListener("click", () => openAssignmentModal());
   $("#close-assignment-modal")?.addEventListener("click", closeAssignmentModal);
   $("#cancel-assignment-modal")?.addEventListener("click", closeAssignmentModal);
   $("#assignment-form")?.addEventListener("submit", saveAssignment);
-  $("#assignment-modal")?.addEventListener("click", event => { if (event.target.id === "assignment-modal") closeAssignmentModal(); });
-  document.querySelectorAll("[data-assignment-status]").forEach(b => b.addEventListener("click", () => changeAssignmentStatus(b.dataset.assignmentStatus)));
-  document.querySelectorAll("[data-assignment-delete]").forEach(b => b.addEventListener("click", () => deleteAssignment(b.dataset.assignmentDelete)));
+
+  $("#assignment-modal")?.addEventListener("click", event => {
+    if (event.target.id === "assignment-modal") {
+      closeAssignmentModal();
+    }
+  });
+
+  document.querySelectorAll("[data-assignment-status]").forEach(button => {
+    button.addEventListener("click", () => changeAssignmentStatus(button.dataset.assignmentStatus));
+  });
+
+  document.querySelectorAll("[data-assignment-edit]").forEach(button => {
+    button.addEventListener("click", () => openAssignmentModal(button.dataset.assignmentEdit));
+  });
+
+  document.querySelectorAll("[data-assignment-delete]").forEach(button => {
+    button.addEventListener("click", () => deleteAssignment(button.dataset.assignmentDelete));
+  });
 }
 
 /* =========================================================
