@@ -62,9 +62,33 @@
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch((error) => {
+        navigator.serviceWorker.register("./sw.js", { scope: "./" }).then((registration) => {
+          registration.update();
+        }).catch((error) => {
           console.warn("StudentHub service worker registration failed:", error);
         });
+
+        const updateOfflineStatus = () => {
+          let banner = document.getElementById("studenthub-offline-status");
+          if (!banner) {
+            banner = document.createElement("div");
+            banner.id = "studenthub-offline-status";
+            banner.className = "offline-status";
+            document.body.appendChild(banner);
+          }
+
+          if (navigator.onLine) {
+            banner.classList.remove("visible");
+            banner.textContent = "";
+          } else {
+            banner.textContent = "You're offline — StudentHub will reconnect when you're back online.";
+            banner.classList.add("visible");
+          }
+        };
+
+        window.addEventListener("online", updateOfflineStatus);
+        window.addEventListener("offline", updateOfflineStatus);
+        updateOfflineStatus();
       });
     }
   </script>
