@@ -352,7 +352,7 @@ function renderAdminAcademic() {
     '</select><select id="admin-score-chapter" class="text-input"><option value="">Chapter</option>'+(state.adminChapters||[]).map(c=>'<option value="'+c.id+'">'+escapeHtml("Chapter "+c.chapter_number+" — "+c.title)+'</option>').join('')+
     '</select><input id="admin-score-value" class="text-input" type="number" min="0" max="100" placeholder="Score (0–100)"><input id="admin-score-date" class="text-input" type="date"><button id="admin-save-score" class="primary-button">Save Score</button></div></section>'+
     '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">📚</span><h2>Recent Scores</h2></div></div><div class="admin-list">'+
-    ((state.adminScores||[]).slice(0,50).map(s=>'<div class="admin-list-row"><div><strong>'+escapeHtml(adminStudentName(s.user_id))+'</strong><small>'+escapeHtml(adminChapterName(s.chapter_id))+' · '+escapeHtml(adminClassName(s.class_id))+' · '+escapeHtml(String(s.score))+'% · '+escapeHtml(s.test_date||"")+'</small></div><button class="danger-button small-button" data-admin-delete-score="'+s.id+'">Delete</button></div>').join('')||'<div class="empty-state compact">No scores found.</div>')+
+    ((state.adminScores||[]).slice(0,50).map(s=>'<div class="admin-list-row"><div><strong>'+escapeHtml(adminStudentName(s.user_id))+'</strong><small>'+escapeHtml(adminChapterName(s.chapter_id))+' · '+escapeHtml(adminClassName(s.class_id))+' · '+escapeHtml(String(s.score))+'% · '+escapeHtml(s.test_date||"")+'</small></div><div class="admin-row-actions"><button class="secondary-button small-button" data-admin-edit-score="'+s.id+'">Edit</button><button class="danger-button small-button" data-admin-delete-score="'+s.id+'">Delete</button></div></div>').join('')||'<div class="empty-state compact">No scores found.</div>')+
     '</div></section></div>';
 }
 
@@ -400,10 +400,42 @@ async function adminSaveScore() {
   const score = Number($("#admin-score-value")?.value);
   const testDate = $("#admin-score-date")?.value || new Date().toISOString().slice(0,10);
   if (!userId || !classId || !chapterId || Number.isNaN(score) || score < 0 || score > 100) return showToast("Choose a student, class, chapter, and score from 0–100.","error");
+
+  const existing = (state.adminScores || []).find((item) =>
+    String(item.user_id) === String(userId) &&
+    String(item.class_id) === String(classId) &&
+    String(item.chapter_id) === String(chapterId)
+  );
+
+  if (existing) {
+    const confirmed = confirm("A score already exists for this student's chapter. Update the existing score instead?");
+    if (!confirmed) return;
+    const {data,error}=await supabaseClient.from("scores").update({score,test_date:testDate}).eq("id",existing.id).select("*").single();
+    if(error)return showToast(error.message,"error");
+    await adminAudit("admin_update_score","score",data.id,{student_id:userId,class_id:classId,chapter_id:Number(chapterId),score,test_date:testDate});
+    await loadAdminData(); rerenderAdminContent(); showToast("Score updated.","success");
+    return;
+  }
+
   const {data,error}=await supabaseClient.from("scores").insert({user_id:userId,class_id:classId,chapter_id:Number(chapterId),score,test_date:testDate}).select("*").single();
   if(error)return showToast(error.message,"error");
   await adminAudit("admin_create_score","score",data.id,{student_id:userId,class_id:classId,chapter_id:Number(chapterId),score,test_date:testDate});
   await loadAdminData(); rerenderAdminContent(); showToast("Score saved.","success");
+}
+
+async function adminEditScore(id) {
+  const score = (state.adminScores || []).find((item) => String(item.id) === String(id));
+  if (!score) return;
+  const value = prompt("Score (0–100):", String(score.score));
+  if (value === null) return;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) return showToast("Enter a score from 0–100.","error");
+  const date = prompt("Test date (YYYY-MM-DD):", score.test_date || new Date().toISOString().slice(0,10));
+  if (date === null) return;
+  const {data,error}=await supabaseClient.from("scores").update({score:numeric,test_date:date}).eq("id",id).select("*").single();
+  if(error)return showToast(error.message,"error");
+  await adminAudit("admin_update_score","score",id,{student_id:score.user_id,class_id:score.class_id,chapter_id:score.chapter_id,old_score:score.score,score:numeric,test_date:date});
+  await loadAdminData(); rerenderAdminContent(); showToast("Score updated.","success");
 }
 
 async function adminDeleteScore(id) {
@@ -467,6 +499,7 @@ function attachAdminEvents() {
   document.querySelectorAll("[data-admin-delete-message]").forEach(b=>b.addEventListener("click",()=>adminDeleteMessage(b.dataset.adminDeleteMessage)));
   document.querySelectorAll("[data-admin-toggle-feed-pin]").forEach(b=>b.addEventListener("click",()=>adminToggleFeedPin(b.dataset.adminToggleFeedPin)));
   document.querySelectorAll("[data-admin-delete-feed]").forEach(b=>b.addEventListener("click",()=>adminDeleteFeed(b.dataset.adminDeleteFeed)));
+  document.querySelectorAll("[data-admin-edit-score]").forEach(b=>b.addEventListener("click",()=>adminEditScore(b.dataset.adminEditScore)));
   document.querySelectorAll("[data-admin-delete-score]").forEach(b=>b.addEventListener("click",()=>adminDeleteScore(b.dataset.adminDeleteScore)));
   document.querySelectorAll("[data-admin-delete-assignment]").forEach(b=>b.addEventListener("click",()=>adminDeleteAssignment(b.dataset.adminDeleteAssignment)));
   document.querySelectorAll("[data-admin-delete-event]").forEach(b=>b.addEventListener("click",()=>adminDeleteEvent(b.dataset.adminDeleteEvent)));
