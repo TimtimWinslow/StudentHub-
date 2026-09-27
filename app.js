@@ -33,6 +33,7 @@ const state = {
   classes: [],
   currentPage: "home",
   isAdmin: false,
+  accountSuspended: false,
   adminStudents: [],
   adminClasses: [],
   adminChapters: [],
@@ -1035,6 +1036,7 @@ async function loadProfile() {
   }
 
   state.profile = data || null;
+  state.accountSuspended = state.profile?.account_status === "suspended";
 
   return state.profile;
 }
@@ -7729,6 +7731,13 @@ async function startAuthenticatedApp() {
       loadSettings(),
       loadAdminStatus()
     ]);
+
+    if (state.accountSuspended) {
+      await supabaseClient.auth.signOut();
+      resetState();
+      renderLogin();
+      return;
+    }
 
     await updatePresence(
       "online"
