@@ -5086,3 +5086,58 @@ select:focus-visible {
 @media(display-mode:standalone){
   .pwa-install-button{display:none!important}
 }
+
+
+/* =========================================================
+   SIDEBAR PWA INSTALL
+   ========================================================= */
+
+.sidebar-install-slot{
+  margin:14px 0 4px;
+  padding:0 2px;
+}
+
+.sidebar-install-slot .pwa-install-button{
+  position:static;
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:10px;
+  border-radius:12px;
+  box-shadow:none;
+  backdrop-filter:none;
+  background:rgba(16,43,66,.72);
+}
+
+.sidebar-install-slot .pwa-install-button:hover{
+  transform:none;
+  box-shadow:none;
+}
+
+.sidebar-install-slot .pwa-install-icon{
+  width:34px;
+  height:34px;
+  flex-basis:34px;
+  font-size:19px;
+}
+
+.sidebar-install-slot .pwa-install-button strong{
+  font-size:12px;
+}
+
+.sidebar-install-slot .pwa-install-button small{
+  font-size:10px;
+}
+
+@media(max-width:800px){
+  .sidebar-install-slot{
+    margin:12px 0 2px;
+  }
+
+  .sidebar-install-slot .pwa-install-button{
+    left:auto;
+    right:auto;
+    bottom:auto;
+    width:100%;
+  }
+}
