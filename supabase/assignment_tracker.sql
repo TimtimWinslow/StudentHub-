@@ -40,3 +40,15 @@ using (auth.uid() = user_id);
 
 create index if not exists assignments_user_due_idx
 on public.assignments(user_id, due_date);
+
+
+-- Upgrade existing StudentHub assignment tables to support class-linked assignments.
+-- Safe to run even if the table already exists.
+alter table public.assignments
+  add column if not exists class_id uuid references public.classes(id) on delete cascade;
+
+create index if not exists assignments_class_due_idx
+  on public.assignments(class_id, due_date);
+
+-- Existing deployments may already have class_id as NOT NULL.
+-- New saves now always provide the active class ID from the app.
