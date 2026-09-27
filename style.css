@@ -4594,3 +4594,6 @@ a,
 @media (max-width: 370px) {
   .account-button { min-width: 38px; }
 }
+
+/* Assignment save modal */
+body.modal-open{overflow:hidden}.assignment-modal-backdrop{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.68);backdrop-filter:blur(6px)}.assignment-modal-backdrop[hidden]{display:none}.assignment-modal{width:min(100%,560px);max-height:min(90dvh,760px);overflow-y:auto;border:1px solid rgba(18,215,232,.2);border-radius:22px;padding:22px;background:#0b2135;box-shadow:0 24px 70px rgba(0,0,0,.45)}.assignment-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.assignment-modal-header h2{margin:0}.assignment-form{display:grid;gap:10px}.assignment-form textarea{resize:vertical;min-height:90px}.assignment-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.assignment-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}@media(max-width:700px){.assignment-modal-backdrop{align-items:end;padding:0}.assignment-modal{width:100%;max-height:92dvh;border-radius:22px 22px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}.assignment-form-grid{grid-template-columns:1fr}.assignment-modal-actions{display:grid;grid-template-columns:1fr 1fr}.assignment-modal-actions button{min-height:46px}}
