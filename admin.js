@@ -481,3 +481,77 @@ async function hydrateAdmin() {
     showToast(error?.message||"Unable to load admin data.","error");
   }
 }
+
+
+/* Final admin controls: class/chapter editing + Care Team pin moderation */
+
+const __adminLoadDataBase = loadAdminData;
+loadAdminData = async function() {
+  await __adminLoadDataBase();
+  state.adminPinnedMessages = await adminSafeQuery(
+    supabaseClient.from("pinned_messages").select("id,message_id,pinned_by,created_at").order("created_at",{ascending:false}).limit(100)
+  );
+};
+
+async function adminEditClass(id) {
+  const klass=(state.adminClasses||[]).find(x=>String(x.id)===String(id));
+  if(!klass)return;
+  const name=prompt("Class name:",klass.name||"");
+  if(!name?.trim())return;
+  const invite=prompt("Invite code:",klass.invite_code||"");
+  const {error}=await supabaseClient.from("classes").update({name:name.trim(),invite_code:invite?.trim()||null}).eq("id",id);
+  if(error)return showToast(error.message,"error");
+  await adminAudit("edit_class","class",id,{name:name.trim()});
+  await loadAdminData(); rerenderAdminContent(); showToast("Class updated.","success");
+}
+
+async function adminEditChapter(id) {
+  const chapter=(state.adminChapters||[]).find(x=>String(x.id)===String(id));
+  if(!chapter)return;
+  const title=prompt("Chapter title:",chapter.title||"");
+  if(!title?.trim())return;
+  const number=Number(prompt("Chapter number:",chapter.chapter_number));
+  if(!number||number<1)return showToast("Invalid chapter number.","error");
+  const {error}=await supabaseClient.from("chapters").update({chapter_number:number,title:title.trim()}).eq("id",id);
+  if(error)return showToast(error.message,"error");
+  await adminAudit("edit_chapter","chapter",id,{chapter_number:number,title:title.trim()});
+  await loadAdminData(); rerenderAdminContent(); showToast("Chapter updated.","success");
+}
+
+async function adminUnpinMessage(pinId,messageId) {
+  if(!confirm("Unpin this Care Team message?"))return;
+  const {error}=await supabaseClient.from("pinned_messages").delete().eq("id",pinId);
+  if(error)return showToast(error.message,"error");
+  await adminAudit("admin_unpin_message","pinned_message",pinId,{message_id:messageId});
+  await loadAdminData(); rerenderAdminContent(); showToast("Message unpinned.","success");
+}
+
+function renderAdminClasses() {
+  return '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">🏫</span><h2>Class Management</h2></div></div><div class="admin-form-row"><input id="admin-class-name" class="text-input" placeholder="Class name (example: CNA)"><input id="admin-class-invite" class="text-input" placeholder="Invite code"><button class="primary-button" id="admin-create-class">Create Class</button></div><div class="admin-list">'+
+    ((state.adminClasses||[]).map(x=>'<div class="admin-list-row"><div><strong>'+escapeHtml(x.name)+'</strong><small>Invite: '+escapeHtml(x.invite_code||"—")+'</small></div><div class="admin-row-actions"><button class="secondary-button small-button" data-admin-edit-class="'+x.id+'">Edit</button><button class="danger-button small-button" data-admin-delete-class="'+x.id+'">Delete</button></div></div>').join('')||'<div class="empty-state compact">No classes found.</div>')+
+    '</div></section>';
+}
+
+function renderAdminChapters() {
+  return '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">📖</span><h2>Chapter Management</h2></div></div><div class="admin-form-row"><input id="admin-chapter-number" class="text-input" type="number" min="1" placeholder="Chapter #"><input id="admin-chapter-title" class="text-input" placeholder="Chapter title"><button class="primary-button" id="admin-create-chapter">Add Chapter</button></div><div class="admin-list">'+
+    ((state.adminChapters||[]).map(x=>'<div class="admin-list-row"><div><strong>Chapter '+escapeHtml(x.chapter_number)+' — '+escapeHtml(x.title)+'</strong></div><div class="admin-row-actions"><button class="secondary-button small-button" data-admin-edit-chapter="'+x.id+'">Edit</button><button class="danger-button small-button" data-admin-delete-chapter="'+x.id+'">Delete</button></div></div>').join('')||'<div class="empty-state compact">No chapters found.</div>')+
+    '</div></section>';
+}
+
+function renderAdminModeration() {
+  const pins=state.adminPinnedMessages||[];
+  const msgById=id=>(state.adminMessages||[]).find(m=>String(m.id)===String(id));
+  return '<div class="admin-grid"><section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">💬</span><h2>Messages</h2></div></div><p class="admin-note">Moderate recent Care Team and direct messages.</p><div class="admin-list">'+((state.adminMessages||[]).map(m=>'<div class="admin-list-row"><div><strong>'+escapeHtml(adminStudentName(m.user_id))+'</strong><small>'+escapeHtml(m.content||m.message||"")+' · '+formatDateTime(m.created_at)+'</small></div><button class="danger-button small-button" data-admin-delete-message="'+m.id+'">Delete</button></div>').join('')||'<div class="empty-state compact">No messages found.</div>')+'</div></section>'+
+  '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">📌</span><h2>Feed</h2></div></div><div class="admin-list">'+((state.adminFeedPosts||[]).map(p=>'<div class="admin-list-row"><div><strong>'+escapeHtml(adminStudentName(p.user_id))+(p.pinned?" · 📌 Pinned":"")+'</strong><small>'+escapeHtml(p.content||"")+' · '+formatDateTime(p.created_at)+'</small></div><div class="admin-row-actions"><button class="secondary-button small-button" data-admin-toggle-feed-pin="'+p.id+'">'+(p.pinned?"Unpin":"Pin")+'</button><button class="danger-button small-button" data-admin-delete-feed="'+p.id+'">Delete</button></div></div>').join('')||'<div class="empty-state compact">No feed posts found.</div>')+'</div></section></div>'+
+  '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">📌</span><h2>Pinned Care Team Messages</h2></div><span class="admin-count">'+pins.length+'</span></div><div class="admin-list">'+
+  (pins.map(p=>{const m=msgById(p.message_id);return '<div class="admin-list-row"><div><strong>'+escapeHtml(adminStudentName(m?.user_id||p.pinned_by))+'</strong><small>'+escapeHtml(m?.content||m?.message||"Pinned message")+' · '+formatDateTime(p.created_at)+'</small></div><button class="danger-button small-button" data-admin-unpin-message="'+p.id+'" data-message-id="'+p.message_id+'">Unpin</button></div>';}).join('')||'<div class="empty-state compact">No pinned Care Team messages.</div>')+
+  '</div></section>';
+}
+
+const __adminAttachBase = attachAdminEvents;
+attachAdminEvents = function() {
+  __adminAttachBase();
+  document.querySelectorAll("[data-admin-edit-class]").forEach(b=>b.addEventListener("click",()=>adminEditClass(b.dataset.adminEditClass)));
+  document.querySelectorAll("[data-admin-edit-chapter]").forEach(b=>b.addEventListener("click",()=>adminEditChapter(b.dataset.adminEditChapter)));
+  document.querySelectorAll("[data-admin-unpin-message]").forEach(b=>b.addEventListener("click",()=>adminUnpinMessage(b.dataset.adminUnpinMessage,b.dataset.messageId)));
+};
