@@ -3953,6 +3953,7 @@ function renderCareTeam() {
           </div>
           <span class="care-message-count">${state.careMessages.length} message${state.careMessages.length === 1 ? "" : "s"}${state.careUnreadCount ? " · " + state.careUnreadCount + " unread" : ""}</span>
         </div>
+        ${state.showNewMessage ? renderNewMessageList() : ""}
         ${renderPinnedMessageStrip()}
         <div class="care-team-messages" id="care-team-messages">
           ${renderCareMessages()}
@@ -4412,6 +4413,18 @@ function renderCareMessage(message) {
   `;
 }
 
+async function refreshCurrentConversation() {
+  const conversation = state.conversations.find(
+    (item) => item.id === state.currentConversationId
+  );
+
+  if (conversation?.type === "direct") {
+    await hydrateDirectMessage();
+  } else {
+    await hydrateCareTeam();
+  }
+}
+
 async function openConversation(conversationId) {
   state.currentConversationId = conversationId;
   state.showNewMessage = false;
@@ -4512,13 +4525,14 @@ async function startDirectMessage(targetUserId) {
 
   const existing = state.conversations.find((conversation) =>
     conversation.type === "direct" &&
+    conversation.members?.some((member) => member.user_id === state.user.id) &&
     conversation.members?.some((member) => member.user_id === targetUserId)
   );
 
   if (existing) {
     state.currentConversationId = existing.id;
     state.showNewMessage = false;
-    await hydrateCareTeam();
+    await hydrateDirectMessage();
     return;
   }
 
@@ -4555,7 +4569,9 @@ async function startDirectMessage(targetUserId) {
 
   state.currentConversationId = conversation.id;
   state.showNewMessage = false;
-  await hydrateCareTeam();
+
+  await loadCareConversations();
+  await hydrateDirectMessage();
 }
 
 async function hydrateCareTeam() {
@@ -4851,7 +4867,7 @@ async function editCareMessage(
     return;
   }
 
-  await hydrateCareTeam();
+  await refreshCurrentConversation();
 }
 
 async function toggleMessageReaction(messageId, reaction = "❤️") {
@@ -4890,7 +4906,7 @@ async function toggleMessageReaction(messageId, reaction = "❤️") {
     }
   }
 
-  await hydrateCareTeam();
+  await refreshCurrentConversation();
 }
 
 async function togglePinnedMessage(messageId) {
@@ -4928,7 +4944,7 @@ async function togglePinnedMessage(messageId) {
     showMessage("Message pinned.");
   }
 
-  await hydrateCareTeam();
+  await refreshCurrentConversation();
 }
 
 function startReply(messageId) {
@@ -5019,7 +5035,7 @@ async function deleteCareMessage(
     return;
   }
 
-  await hydrateCareTeam();
+  await refreshCurrentConversation();
 }
 
 /* =========================================================
