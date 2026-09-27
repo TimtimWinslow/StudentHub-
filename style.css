@@ -4734,3 +4734,15 @@ select:focus-visible {
     border-radius: 12px;
   }
 }
+
+
+/* =========================================================
+   ADMIN STUDENT MANAGEMENT
+   ========================================================= */
+.admin-student-tools{margin-bottom:18px}
+.admin-enrollment-form{grid-template-columns:1fr 1fr auto}
+.admin-enrollment-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;margin-bottom:6px;border:1px solid var(--border);border-radius:9px;background:var(--bg-secondary)}
+.admin-enrollment-chip:last-child{margin-bottom:0}
+.admin-muted{color:var(--text-muted);font-size:12px}
+#admin-enrollment-status{margin-top:8px}
+@media(max-width:800px){.admin-enrollment-form{grid-template-columns:1fr}.admin-enrollment-chip{align-items:flex-start;flex-direction:column}.admin-enrollment-chip .small-button{width:100%}}
