@@ -555,3 +555,26 @@ attachAdminEvents = function() {
   document.querySelectorAll("[data-admin-edit-chapter]").forEach(b=>b.addEventListener("click",()=>adminEditChapter(b.dataset.adminEditChapter)));
   document.querySelectorAll("[data-admin-unpin-message]").forEach(b=>b.addEventListener("click",()=>adminUnpinMessage(b.dataset.adminUnpinMessage,b.dataset.messageId)));
 };
+
+
+function rerenderAdminContent() {
+  const c=$("#admin-content");
+  if(!c)return;
+  const renderers={
+    dashboard:renderAdminDashboard,
+    students:renderAdminStudents,
+    classes:renderAdminClasses,
+    chapters:renderAdminChapters,
+    academic:renderAdminAcademic,
+    calendar:renderAdminCalendarControl,
+    assignments:renderAdminAssignmentsControl,
+    announcements:renderAdminAnnouncements,
+    moderation:renderAdminModeration,
+    admins:renderAdminAdmins,
+    audit:renderAdminAudit,
+    export:renderAdminExport,
+    settings:renderAdminSettings
+  };
+  c.innerHTML=(renderers[state.adminSection]||renderAdminDashboard)();
+  attachAdminEvents();
+}
