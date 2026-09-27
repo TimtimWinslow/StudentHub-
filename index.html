@@ -2,12 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StudentHub</title>
 
   <meta name="theme-color" content="#071A2B" />
@@ -22,11 +17,9 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <!-- StudentHub Debug System -->
   <script>
     window.STUDENTHUB_DEBUG = {
-      enabled:
-        new URLSearchParams(window.location.search).get("debug") === "true",
+      enabled: new URLSearchParams(window.location.search).get("debug") === "true",
       startedAt: new Date().toISOString(),
       errors: []
     };
@@ -44,21 +37,13 @@
     window.addEventListener("unhandledrejection", function (event) {
       window.STUDENTHUB_DEBUG.errors.push({
         type: "Unhandled Promise Error",
-        message:
-          event.reason?.message ||
-          String(event.reason) ||
-          "Unknown promise error"
+        message: event.reason?.message || String(event.reason) || "Unknown promise error"
       });
     });
 
-    /*
-      This marker proves that index.html itself loaded.
-    */
-    document.documentElement.setAttribute(
-      "data-studenthub-index-loaded",
-      "true"
-    );
+    document.documentElement.setAttribute("data-studenthub-index-loaded", "true");
   </script>
+
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -102,6 +87,7 @@
           registration.addEventListener("updatefound", () => {
             const worker = registration.installing;
             if (!worker) return;
+
             worker.addEventListener("statechange", () => {
               if (worker.state === "installed") checkForWaitingWorker();
             });
@@ -112,6 +98,7 @@
 
         const updateOfflineStatus = () => {
           let banner = document.getElementById("studenthub-offline-status");
+
           if (!banner) {
             banner = document.createElement("div");
             banner.id = "studenthub-offline-status";
@@ -141,19 +128,11 @@
     <!-- StudentHub will load here -->
   </div>
 
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- StudentHub Debug System -->
   <script src="debug.js"></script>
-
-  <!-- StudentHub Admin -->
   <script src="admin.js"></script>
-
-  <!-- StudentHub Application -->
   <script src="app.js"></script>
 
-  <!-- StudentHub PWA install experience -->
   <script>
     (() => {
       let deferredInstallPrompt = null;
@@ -162,9 +141,11 @@
         window.matchMedia?.("(display-mode: standalone)")?.matches ||
         window.navigator.standalone === true;
 
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      const isIOS =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
+      const isAndroid = /Android/i.test(navigator.userAgent);
       const isInAppBrowser = /FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
 
       const removeInstallUi = () => {
@@ -172,8 +153,25 @@
         document.getElementById("studenthub-install-modal")?.remove();
       };
 
-      const showIOSInstructions = () => {
+      const showInstallInstructions = (platform) => {
         if (document.getElementById("studenthub-install-modal")) return;
+
+        const android = platform === "android";
+        const title = android
+          ? "Install StudentHub on Android"
+          : "Add StudentHub to your iPhone";
+
+        const steps = android
+          ? `
+            <li>Open StudentHub in <strong>Chrome</strong>.</li>
+            <li>Tap <strong>Install</strong> if Chrome shows the install option, or open the <strong>⋮</strong> menu and choose <strong>Install app</strong> / <strong>Add to Home screen</strong>.</li>
+            <li>Tap <strong>Install</strong> or <strong>Add</strong> to finish.</li>
+          `
+          : `
+            <li>Tap the <strong>Share</strong> button in Safari.</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Tap <strong>Add</strong> to finish.</li>
+          `;
 
         const modal = document.createElement("div");
         modal.id = "studenthub-install-modal";
@@ -183,15 +181,11 @@
             <div class="pwa-install-modal-header">
               <div>
                 <span class="pwa-install-kicker">StudentHub App</span>
-                <h2 id="pwa-install-title">Add StudentHub to your iPhone</h2>
+                <h2 id="pwa-install-title">${title}</h2>
               </div>
               <button type="button" class="pwa-install-close" aria-label="Close">×</button>
             </div>
-            <ol class="pwa-install-steps">
-              <li>Tap the <strong>Share</strong> button in Safari.</li>
-              <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
-              <li>Tap <strong>Add</strong> to finish.</li>
-            </ol>
+            <ol class="pwa-install-steps">${steps}</ol>
             <p class="pwa-install-note">StudentHub will open from your Home Screen like an app.</p>
             <button type="button" class="primary-button pwa-install-done">Got it</button>
           </div>
@@ -208,7 +202,11 @@
       };
 
       const createInstallButton = () => {
-        if (isStandalone() || isInAppBrowser || document.getElementById("studenthub-install-button")) return;
+        if (
+          isStandalone() ||
+          isInAppBrowser ||
+          document.getElementById("studenthub-install-button")
+        ) return;
 
         const button = document.createElement("button");
         button.id = "studenthub-install-button";
@@ -226,17 +224,26 @@
           if (deferredInstallPrompt) {
             deferredInstallPrompt.prompt();
             const result = await deferredInstallPrompt.userChoice;
-            if (result?.outcome === "accepted") removeInstallUi();
+
+            if (result?.outcome === "accepted") {
+              removeInstallUi();
+            }
+
             deferredInstallPrompt = null;
             return;
           }
 
           if (isIOS) {
-            showIOSInstructions();
+            showInstallInstructions("ios");
             return;
           }
 
-          alert("To install StudentHub, use your browser's Install or Add to Home Screen option.");
+          if (isAndroid) {
+            showInstallInstructions("android");
+            return;
+          }
+
+          alert("Use your browser's Install or Add to Home Screen option to install StudentHub.");
         });
 
         document.body.appendChild(button);
@@ -254,11 +261,15 @@
       });
 
       window.addEventListener("load", () => {
-        if (!isStandalone() && !isInAppBrowser) createInstallButton();
+        if (!isStandalone() && !isInAppBrowser) {
+          createInstallButton();
+        }
       });
 
       window.addEventListener("pageshow", () => {
-        if (isStandalone()) removeInstallUi();
+        if (isStandalone()) {
+          removeInstallUi();
+        }
       });
     })();
   </script>
