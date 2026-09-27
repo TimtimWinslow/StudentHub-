@@ -3573,6 +3573,8 @@ async function hydrateAssignments() {
 async function loadCareConversations() {
   if (!supabaseClient || !state.user) return [];
 
+  await loadActiveUsers();
+
   const { data: conversations, error } = await supabaseClient
     .from("conversations")
     .select("*")
@@ -3789,7 +3791,16 @@ function renderMessageReactions(messageId) {
 
 function getPresenceStatus(userId) {
   const active = (state.activeUsers || []).find(item => String(item.id || item.user_id) === String(userId));
-  return active?.status || "Offline";
+  if (!active?.last_seen_at) return "Offline";
+  const age = Date.now() - new Date(active.last_seen_at).getTime();
+  if (!Number.isFinite(age) || age > 2 * 60 * 1000) return "Offline";
+  if (String(active.status || "").toLowerCase() === "idle") return "Idle";
+  return "Online";
+}
+
+function renderPresenceBadge(userId) {
+  const status = getPresenceStatus(userId);
+  return `<span class="presence-badge ${status.toLowerCase()}"><span class="presence-dot ${status.toLowerCase()}"></span>${status}</span>`;
 }
 
 function isMessagePinned(messageId) {
@@ -3921,7 +3932,7 @@ function renderDirectConversationList() {
             </span>
             <span class="conversation-item-text">
               <strong>${escapeHtml(name)}</strong>
-              <small>Private message</small>
+              <small>${renderPresenceBadge(conversation.otherMember?.id)}</small>
             </span>
           </button>
         `;
@@ -4005,7 +4016,7 @@ function renderConversationList() {
         <span class="conversation-avatar">💬</span>
         <span class="conversation-item-text">
           <strong>The Care Team</strong>
-          <small>📌 Pinned group chat</small>
+          <small>📌 Pinned group chat · ${group.members?.length || 0} members</small>
         </span>
       </button>
     ` : ""}
@@ -4029,7 +4040,7 @@ function renderConversationList() {
           </span>
           <span class="conversation-item-text">
             <strong>${escapeHtml(name)}</strong>
-            <small>Direct message</small>
+            <small>${renderPresenceBadge(conversation.otherMember?.id)}</small>
           </span>
         </button>
       `;
@@ -4085,7 +4096,7 @@ function renderClassmateList(classmates) {
         </span>
         <span>
           <strong>${escapeHtml(name)}</strong>
-          <small>Send a private message</small>
+          <small>${renderPresenceBadge(classmate.id)} · Send a private message</small>
         </span>
       </button>
     `;
@@ -8168,7 +8179,7 @@ function startPresenceLifecycle() {
   if (activeUsersRefreshTimer) clearInterval(activeUsersRefreshTimer);
 
   activeUsersRefreshTimer = setInterval(async () => {
-    if (!state.user || state.currentPage !== "home") return;
+    if (!state.user) return;
 
     await loadActiveUsers();
 
