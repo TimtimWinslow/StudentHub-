@@ -37,6 +37,7 @@ const state = {
   adminClasses: [],
   adminChapters: [],
   adminAuditLog: [],
+  adminEnrollments: [],
   adminSection: "dashboard",
 
   academicSummary: null,
