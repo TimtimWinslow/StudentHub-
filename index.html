@@ -42,28 +42,117 @@
     });
 
     document.documentElement.setAttribute("data-studenthub-index-loaded", "true");
-  </script>
 
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("appinstalled", () => {
+    let deferredInstallPrompt = null;
+
+    function isStandalone() {
+      return window.matchMedia?.("(display-mode: standalone)")?.matches ||
+        window.navigator.standalone === true;
+    }
+
+    function isIOS() {
+      return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    }
+
+    function isAndroid() {
+      return /android/i.test(window.navigator.userAgent);
+    }
+
+    function isInAppBrowser() {
+      return /FBAN|FBAV|Instagram|Line|Twitter|Snapchat/i.test(window.navigator.userAgent);
+    }
+
+    function removeInstallUi() {
+      document.querySelectorAll(
+        "#studenthub-install-banner, #studenthub-install-button"
+      ).forEach((element) => element.remove());
+    }
+
+    function showInstallInstructions(platform) {
+      const message = platform === "ios"
+        ? "To install StudentHub on iPhone: tap Share in Safari, then Add to Home Screen, then Add."
+        : platform === "android"
+          ? "To install StudentHub on Android: open the browser menu, then choose Install app or Add to Home Screen."
+          : "Use your browser's Install or Add to Home Screen option.";
+
+      alert(message);
+    }
+
+    function createInstallButton() {
+      if (isStandalone() || isInAppBrowser()) return;
+      if (document.getElementById("studenthub-install-button")) return;
+
+      const button = document.createElement("button");
+      button.id = "studenthub-install-button";
+      button.type = "button";
+      button.textContent = "Install StudentHub";
+      button.addEventListener("click", function () {
+        if (typeof window.studentHubInstall === "function") {
+          window.studentHubInstall();
+        }
+      });
+
+      document.body.appendChild(button);
+    }
+
+    window.studentHubInstall = async function () {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const result = await deferredInstallPrompt.userChoice;
+        if (result?.outcome === "accepted") removeInstallUi();
         deferredInstallPrompt = null;
-        removeInstallUi();
-        window.dispatchEvent(new Event("studenthub-app-installed"));
-      });
+        return;
+      }
 
-      window.addEventListener("load", () => {
-        if (!isStandalone() && !isInAppBrowser) {
-          createInstallButton();
-        }
-      });
+      if (isIOS()) {
+        showInstallInstructions("ios");
+        return;
+      }
 
-      window.addEventListener("pageshow", () => {
-        if (isStandalone()) {
-          removeInstallUi();
-        }
-      });
-    })();
+      if (isAndroid()) {
+        showInstallInstructions("android");
+        return;
+      }
+
+      if (isStandalone()) {
+        alert("StudentHub is already installed on this device.");
+        return;
+      }
+
+      showInstallInstructions("browser");
+    };
+
+    window.addEventListener("beforeinstallprompt", function (event) {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      window.dispatchEvent(new Event("studenthub-install-available"));
+    });
+
+    window.addEventListener("appinstalled", function () {
+      deferredInstallPrompt = null;
+      removeInstallUi();
+      window.dispatchEvent(new Event("studenthub-app-installed"));
+    });
+
+    window.addEventListener("pageshow", function () {
+      if (isStandalone()) removeInstallUi();
+    });
+
+    window.addEventListener("load", function () {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("./sw.js").catch(function (error) {
+          console.error("StudentHub service worker registration failed:", error);
+        });
+      }
+    });
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="admin.js"></script>
+  <script src="app.js"></script>
+</head>
+
+<body>
+  <div id="app"></div>
 </body>
 </html>
