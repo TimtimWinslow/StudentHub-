@@ -65,6 +65,7 @@ const state = {
   showNewMessage: false,
   searchQuery: "",
   searchResults: [],
+  replyToMessage: null,
 
   flashcardDecks: [],
   currentDeck: null,
@@ -588,6 +589,7 @@ function resetState() {
   state.classmates = [];
   state.currentConversationId = null;
   state.showNewMessage = false;
+  state.replyToMessage = null;
 
   state.flashcardDecks = [];
   state.currentDeck = null;
@@ -4259,6 +4261,20 @@ function renderCareMessage(message) {
 
         </div>
 
+        ${message.reply_to_message_id ? (() => {
+          const original = state.careMessages.find(item => item.id === message.reply_to_message_id);
+          if (!original) return "";
+          const originalProfile = original.profiles || {};
+          const originalName = originalProfile.display_name || originalProfile.full_name || "Student";
+          const originalText = original.content || original.message || "";
+          return \`
+            <button type="button" class="message-reply-preview" data-jump-message="${escapeHtml(original.id)}">
+              <strong>↩ Replying to ${escapeHtml(originalName)}</strong>
+              <span>${escapeHtml(originalText.slice(0, 140))}${originalText.length > 140 ? "…" : ""}</span>
+            </button>
+          \`;
+        })() : ""}
+
         <div class="care-message-content">
           ${escapeHtml(
             message.content ||
@@ -4270,6 +4286,7 @@ function renderCareMessage(message) {
 
         <div class="care-message-actions">
           <div class="reaction-picker">${renderMessageReactions(message.id)}</div>
+          <button type="button" data-reply-message="${escapeHtml(message.id)}">↩ Reply</button>
 
           <button
             data-pin-message="${escapeHtml(message.id)}"
@@ -4474,6 +4491,7 @@ async function hydrateCareTeam() {
     "submit",
     handleCareMessageSubmit
   );
+  renderReplyComposer();
 
   $("#new-message-button")?.addEventListener("click", async () => {
     state.showNewMessage = true;
@@ -4542,6 +4560,14 @@ async function hydrateCareTeam() {
       togglePinnedMessage(button.dataset.pinMessage)
     );
   });
+
+  document.querySelectorAll("[data-reply-message]").forEach((button) => {
+    button.addEventListener("click", () => startReply(button.dataset.replyMessage));
+  });
+
+  document.querySelectorAll("[data-jump-message]").forEach((button) => {
+    button.addEventListener("click", () => jumpToMessage(button.dataset.jumpMessage));
+  });
 }
 
 async function handleCareMessageSubmit(
@@ -4574,7 +4600,8 @@ async function sendCareMessage(content) {
     user_id: state.user.id,
     sender_id: state.user.id,
     conversation_id: state.currentConversationId,
-    content
+    content,
+    reply_to_message_id: state.replyToMessage?.id || null
   };
 
   let result =
@@ -4597,7 +4624,8 @@ async function sendCareMessage(content) {
           conversation_id:
             state.currentConversationId,
           message: content,
-          sender_id: state.user.id
+          sender_id: state.user.id,
+          reply_to_message_id: state.replyToMessage?.id || null
         });
   }
 
@@ -4611,6 +4639,7 @@ async function sendCareMessage(content) {
     return;
   }
 
+  state.replyToMessage = null;
   await hydrateCareTeam();
 
   // Put the newest message into view after the chat rerenders.
@@ -4772,6 +4801,44 @@ async function togglePinnedMessage(messageId) {
   }
 
   await hydrateCareTeam();
+}
+
+function startReply(messageId) {
+  const message = state.careMessages.find(item => item.id === messageId);
+  if (!message) return;
+  state.replyToMessage = message;
+  renderReplyComposer();
+  const input = $("#care-message-input");
+  if (input) input.focus();
+}
+
+function cancelReply() {
+  state.replyToMessage = null;
+  renderReplyComposer();
+}
+
+function renderReplyComposer() {
+  document.querySelector(".care-reply-composer")?.remove();
+  if (!state.replyToMessage) return;
+  const message = state.replyToMessage;
+  const profile = message.profiles || {};
+  const name = profile.display_name || profile.full_name || "Student";
+  const textValue = message.content || message.message || "";
+  const form = $("#care-message-form");
+  if (!form) return;
+  const banner = document.createElement("div");
+  banner.className = "care-reply-composer";
+  banner.innerHTML = `<div><strong>↩ Replying to ${escapeHtml(name)}</strong><span>${escapeHtml(textValue.slice(0, 160))}${textValue.length > 160 ? "…" : ""}</span></div><button type="button" id="cancel-care-reply">×</button>`;
+  form.prepend(banner);
+  $("#cancel-care-reply")?.addEventListener("click", cancelReply);
+}
+
+function jumpToMessage(messageId) {
+  const target = document.querySelector(`[data-message-id="${CSS.escape(String(messageId))}"]`);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  target.classList.add("message-highlight");
+  setTimeout(() => target.classList.remove("message-highlight"), 1400);
 }
 
 async function deleteCareMessage(
