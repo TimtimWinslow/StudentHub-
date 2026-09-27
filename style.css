@@ -4785,3 +4785,45 @@ select:focus-visible {
 
 .admin-check-row{display:flex;align-items:center;gap:9px;padding:10px 2px;color:var(--text-color,#eef7fb);font-size:14px}
 .admin-check-row input{width:17px;height:17px;accent-color:#12d7e8}
+
+
+/* =========================================================
+   PWA UPDATE PROMPT
+   ========================================================= */
+.pwa-update-prompt{
+  position:fixed;
+  left:50%;
+  bottom:max(16px,env(safe-area-inset-bottom));
+  z-index:3100;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:min(92vw,430px);
+  padding:10px 11px 10px 14px;
+  border:1px solid rgba(18,215,232,.28);
+  border-radius:14px;
+  background:#102b42;
+  color:var(--text);
+  box-shadow:0 16px 45px rgba(0,0,0,.42);
+  backdrop-filter:blur(16px);
+  font-size:13px;
+  font-weight:700;
+}
+.pwa-update-prompt span{flex:1;line-height:1.35}
+.pwa-update-prompt button{
+  min-height:38px;
+  padding:0 13px;
+  border:0;
+  border-radius:9px;
+  background:linear-gradient(135deg,var(--accent),var(--blue));
+  color:#fff;
+  font-weight:800;
+}
+.pwa-update-prompt button:active{transform:scale(.98)}
+@media(max-width:500px){
+  .pwa-update-prompt{
+    bottom:max(10px,env(safe-area-inset-bottom));
+    width:calc(100% - 20px);
+  }
+}
