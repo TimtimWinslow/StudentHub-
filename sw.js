@@ -1,4 +1,4 @@
-const CACHE_NAME = "studenthub-shell-v1";
+const CACHE_NAME = "studenthub-shell-v2";
 
 const APP_SHELL = [
   "./",
@@ -41,6 +41,21 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (!request.url.startsWith(self.location.origin)) return;
 
+  // Navigation requests prefer the live site so deployments are picked up.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
+          return response;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
+  // Static app assets use cache-first for fast repeat loads.
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
