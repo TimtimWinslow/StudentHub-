@@ -62,8 +62,50 @@
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
+        let refreshing = false;
+
+        const showUpdatePrompt = (registration) => {
+          if (document.getElementById("studenthub-update-prompt")) return;
+
+          const prompt = document.createElement("div");
+          prompt.id = "studenthub-update-prompt";
+          prompt.className = "pwa-update-prompt";
+          prompt.innerHTML = `
+            <span>StudentHub has an update ready.</span>
+            <button type="button" id="studenthub-update-button">Update</button>
+          `;
+          document.body.appendChild(prompt);
+
+          document.getElementById("studenthub-update-button")?.addEventListener("click", () => {
+            prompt.remove();
+            registration.waiting?.postMessage({ type: "SKIP_WAITING" });
+          });
+        };
+
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+
         navigator.serviceWorker.register("./sw.js", { scope: "./" }).then((registration) => {
           registration.update();
+
+          const checkForWaitingWorker = () => {
+            if (registration.waiting && navigator.serviceWorker.controller) {
+              showUpdatePrompt(registration);
+            }
+          };
+
+          checkForWaitingWorker();
+
+          registration.addEventListener("updatefound", () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener("statechange", () => {
+              if (worker.state === "installed") checkForWaitingWorker();
+            });
+          });
         }).catch((error) => {
           console.warn("StudentHub service worker registration failed:", error);
         });
