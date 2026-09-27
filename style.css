@@ -5088,56 +5088,20 @@ select:focus-visible {
 }
 
 
+
 /* =========================================================
-   SIDEBAR PWA INSTALL
+   INSTALL STUDENTHUB PAGE
    ========================================================= */
-
-.sidebar-install-slot{
-  margin:14px 0 4px;
-  padding:0 2px;
-}
-
-.sidebar-install-slot .pwa-install-button{
-  position:static;
-  width:100%;
-  max-width:none;
-  margin:0;
-  padding:10px;
-  border-radius:12px;
-  box-shadow:none;
-  backdrop-filter:none;
-  background:rgba(16,43,66,.72);
-}
-
-.sidebar-install-slot .pwa-install-button:hover{
-  transform:none;
-  box-shadow:none;
-}
-
-.sidebar-install-slot .pwa-install-icon{
-  width:34px;
-  height:34px;
-  flex-basis:34px;
-  font-size:19px;
-}
-
-.sidebar-install-slot .pwa-install-button strong{
-  font-size:12px;
-}
-
-.sidebar-install-slot .pwa-install-button small{
-  font-size:10px;
-}
-
-@media(max-width:800px){
-  .sidebar-install-slot{
-    margin:12px 0 2px;
-  }
-
-  .sidebar-install-slot .pwa-install-button{
-    left:auto;
-    right:auto;
-    bottom:auto;
-    width:100%;
-  }
-}
+.install-panel{max-width:900px;margin:0 auto}
+.install-hero{display:flex;align-items:center;gap:18px;padding:6px 0 22px}
+.install-logo{width:76px;height:76px;flex:0 0 76px;display:grid;place-items:center;border-radius:20px;background:rgba(18,215,232,.10);border:1px solid rgba(18,215,232,.24)}
+.install-logo img{width:54px;height:54px;object-fit:contain}
+.install-hero h2{margin:0 0 6px}.install-hero p{margin:0;color:var(--muted-text,#9fb0bf);line-height:1.5}
+.install-actions{padding:0 0 22px}.install-page-button{min-height:48px;width:100%}.install-page-button:disabled{opacity:.8;cursor:default}
+.install-instructions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.install-instruction-card{padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
+.install-instruction-icon{font-size:25px;margin-bottom:8px}.install-instruction-card h3{margin:0 0 10px}
+.install-instruction-card ol{margin:0;padding-left:22px;color:var(--muted-text,#9fb0bf);line-height:1.7}.install-instruction-card strong{color:var(--text-color,#eef7fb)}
+.install-note{display:flex;flex-direction:column;gap:5px;margin-top:14px;padding:14px 16px;border-left:3px solid #12d7e8;border-radius:10px;background:rgba(18,215,232,.06)}
+.install-note span{color:var(--muted-text,#9fb0bf);line-height:1.5}
+@media(max-width:700px){.install-hero{align-items:flex-start}.install-logo{width:62px;height:62px;flex-basis:62px;border-radius:16px}.install-logo img{width:44px;height:44px}.install-instructions-grid{grid-template-columns:1fr}}
