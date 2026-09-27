@@ -369,7 +369,13 @@ function scheduleCareRealtimeRefresh(presenceOnly = false) {
     if (state.currentPage !== "care-team" && state.currentPage !== "messages") return;
 
     try {
-      if (state.currentPage === "care-team") {
+      const conversation = state.conversations.find(
+        (item) => item.id === state.currentConversationId
+      );
+
+      if (conversation?.type === "direct") {
+        await hydrateDirectMessage();
+      } else if (state.currentPage === "care-team") {
         await hydrateCareTeam();
       } else if (state.currentPage === "messages") {
         await hydrateMessages();
@@ -4532,6 +4538,8 @@ async function startDirectMessage(targetUserId) {
   if (existing) {
     state.currentConversationId = existing.id;
     state.showNewMessage = false;
+    state.currentPage = "messages";
+    renderAppShell();
     await hydrateDirectMessage();
     return;
   }
@@ -4569,7 +4577,9 @@ async function startDirectMessage(targetUserId) {
 
   state.currentConversationId = conversation.id;
   state.showNewMessage = false;
+  state.currentPage = "messages";
 
+  renderAppShell();
   await loadCareConversations();
   await hydrateDirectMessage();
 }
