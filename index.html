@@ -202,11 +202,17 @@
       };
 
       const createInstallButton = () => {
-        if (
-          isStandalone() ||
-          isInAppBrowser ||
-          document.getElementById("studenthub-install-button")
-        ) return;
+        const existing = document.getElementById("studenthub-install-button");
+        const slot = document.getElementById("studenthub-install-slot");
+
+        if (isStandalone() || isInAppBrowser) return;
+
+        if (existing) {
+          if (slot && existing.parentElement !== slot) {
+            slot.appendChild(existing);
+          }
+          return;
+        }
 
         const button = document.createElement("button");
         button.id = "studenthub-install-button";
@@ -246,8 +252,18 @@
           alert("Use your browser's Install or Add to Home Screen option to install StudentHub.");
         });
 
-        document.body.appendChild(button);
+        const slot = document.getElementById("studenthub-install-slot");
+
+        if (slot) {
+          slot.appendChild(button);
+        } else {
+          document.body.appendChild(button);
+        }
       };
+
+      window.addEventListener("studenthub-shell-ready", () => {
+        createInstallButton();
+      });
 
       window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
