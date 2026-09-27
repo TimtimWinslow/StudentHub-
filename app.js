@@ -3662,38 +3662,85 @@ async function loadCareConversations() {
 
   await loadActiveUsers();
 
-  const { data: conversations, error } = await supabaseClient
+  // Load the conversations the signed-in user is actually a member of.
+  // This makes private conversations persist in the Messages list even
+  // when conversation-level RLS or ordering changes.
+  const { data: myMemberships, error: membershipError } = await supabaseClient
+    .from("conversation_members")
+    .select("conversation_id")
+    .eq("user_id", state.user.id);
+
+  if (membershipError) {
+    console.error("Conversation membership load error:", membershipError);
+    state.conversations = [];
+    return [];
+  }
+
+  const myConversationIds = [
+    ...new Set((myMemberships || []).map((row) => row.conversation_id).filter(Boolean))
+  ];
+
+  let conversations = [];
+
+  if (myConversationIds.length) {
+    const { data, error } = await supabaseClient
+      .from("conversations")
+      .select("*")
+      .in("id", myConversationIds)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("Conversation load error:", error);
+      state.conversations = [];
+      return [];
+    }
+
+    conversations = data || [];
+  }
+
+  // The Care Team is always discoverable, even before a newly registered
+  // student has opened it for the first time.
+  const { data: groupConversation, error: groupError } = await supabaseClient
     .from("conversations")
     .select("*")
-    .order("updated_at", { ascending: false });
+    .eq("type", "group")
+    .eq("name", "The Care Team")
+    .maybeSingle();
 
-  if (error) {
-    console.error("Conversation load error:", error);
-    state.conversations = [];
-    return [];
+  if (!groupError && groupConversation && !conversations.some((item) => item.id === groupConversation.id)) {
+    conversations.push(groupConversation);
   }
 
-  const { data: members, error: memberError } = await supabaseClient
-    .from("conversation_members")
-    .select(`
-      conversation_id,
-      user_id,
-      profiles (
-        id,
-        display_name,
-        full_name,
-        avatar_url
-      )
-    `);
+  let members = [];
 
-  if (memberError) {
-    console.error("Conversation member load error:", memberError);
-    state.conversations = [];
-    return [];
+  if (conversations.length) {
+    const conversationIds = conversations.map((conversation) => conversation.id);
+
+    const { data, error: memberError } = await supabaseClient
+      .from("conversation_members")
+      .select(`
+        conversation_id,
+        user_id,
+        profiles (
+          id,
+          display_name,
+          full_name,
+          avatar_url
+        )
+      `)
+      .in("conversation_id", conversationIds);
+
+    if (memberError) {
+      console.error("Conversation member load error:", memberError);
+      state.conversations = [];
+      return [];
+    }
+
+    members = data || [];
   }
 
-  state.conversations = (conversations || []).map((conversation) => {
-    const conversationMembers = (members || []).filter(
+  state.conversations = conversations.map((conversation) => {
+    const conversationMembers = members.filter(
       (member) => member.conversation_id === conversation.id
     );
 
@@ -3735,14 +3782,13 @@ async function loadCareConversations() {
       }
     }
 
-    if (!state.currentConversationId) {
+    if (!state.currentConversationId && state.currentConversationType !== "direct") {
       state.currentConversationId = group.id;
     }
   }
 
   return state.conversations;
 }
-
 async function loadClassmates() {
   if (!supabaseClient || !state.user) return [];
 
