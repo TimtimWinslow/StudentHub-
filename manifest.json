@@ -5,40 +5,36 @@
   "start_url": "./?source=pwa",
   "scope": "./",
   "id": "./",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone",
-    "minimal-ui"
-  ],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#071A2B",
   "theme_color": "#071A2B",
   "lang": "en-US",
   "dir": "ltr",
-  "categories": [
-    "education",
-    "productivity"
-  ],
+  "categories": ["education", "productivity"],
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "assets/studenthub-mark.svg",
-      "sizes": "256x256",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "assets/studenthub-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "assets/studenthub-favicon.svg",
-      "sizes": "64x64",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "assets/studenthub-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/studenthub-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "launch_handler": {
-    "client_mode": [
-      "focus-existing",
-      "navigate-new"
-    ]
+    "client_mode": ["focus-existing", "navigate-new"]
   }
 }
