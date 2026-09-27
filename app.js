@@ -3769,19 +3769,27 @@ async function loadMessageReactions() {
   return state.messageReactions;
 }
 
+const CARE_REACTIONS = ["❤️", "👍", "😂", "😮", "😢", "👏"];
+
 function getMessageReactionCount(messageId, reaction = "❤️") {
-  return state.messageReactions.filter(
-    item => item.message_id === messageId && item.reaction === reaction
-  ).length;
+  return state.messageReactions.filter(item => item.message_id === messageId && item.reaction === reaction).length;
 }
 
 function hasMyMessageReaction(messageId, reaction = "❤️") {
-  return state.messageReactions.some(
-    item =>
-      item.message_id === messageId &&
-      item.user_id === state.user?.id &&
-      item.reaction === reaction
-  );
+  return state.messageReactions.some(item => item.message_id === messageId && item.user_id === state.user?.id && item.reaction === reaction);
+}
+
+function renderMessageReactions(messageId) {
+  return CARE_REACTIONS.map((reaction) => {
+    const count = getMessageReactionCount(messageId, reaction);
+    const active = hasMyMessageReaction(messageId, reaction);
+    return "<button type=\"button\" data-react-message=\"" + escapeHtml(messageId) + "\" data-reaction=\"" + reaction + "\" class=\"" + (active ? "active" : "") + "\">" + reaction + (count ? " <span>" + count + "</span>" : "") + "</button>";
+  }).join("");
+}
+
+function getPresenceStatus(userId) {
+  const active = (state.activeUsers || []).find(item => String(item.id || item.user_id) === String(userId));
+  return active?.status || "Offline";
 }
 
 function isMessagePinned(messageId) {
@@ -4308,7 +4316,7 @@ async function hydrateDirectMessage() {
     button.addEventListener("click", () => deleteCareMessage(button.dataset.deleteMessage));
   });
   document.querySelectorAll("[data-react-message]").forEach((button) => {
-    button.addEventListener("click", () => toggleMessageReaction(button.dataset.reactMessage));
+    button.addEventListener("click", () => toggleMessageReaction(button.dataset.reactMessage, button.dataset.reaction || "❤️"));
   });
   document.querySelectorAll("[data-pin-message]").forEach((button) => {
     button.addEventListener("click", () => togglePinnedMessage(button.dataset.pinMessage));
@@ -4617,14 +4625,14 @@ async function editCareMessage(
   await hydrateCareTeam();
 }
 
-async function toggleMessageReaction(messageId) {
+async function toggleMessageReaction(messageId, reaction = "❤️") {
   if (!supabaseClient || !state.user) return;
 
   const existing = state.messageReactions.find(
     item =>
       item.message_id === messageId &&
       item.user_id === state.user.id &&
-      item.reaction === "❤️"
+      item.reaction === reaction
   );
 
   if (existing) {
@@ -4644,7 +4652,7 @@ async function toggleMessageReaction(messageId) {
       .insert({
         message_id: messageId,
         user_id: state.user.id,
-        reaction: "❤️"
+        reaction
       });
 
     if (error) {
