@@ -1968,7 +1968,7 @@ function renderSidebar() {
         ${navButton(
           "install",
           "📱",
-          "Install StudentHub"
+          "Student Hub App"
         )}
 
         ${
@@ -2053,21 +2053,21 @@ function renderInstallStudentHub() {
       <div class="page-header">
         <div>
           <p class="eyebrow">STUDENTHUB APP</p>
-          <h1>Install StudentHub 📱</h1>
-          <p>Add StudentHub to your Home Screen and use it like a real app.</p>
+          <h1>Student Hub App 📱</h1>
+          <p>Add the Student Hub App to your Home Screen and use it like a real app.</p>
         </div>
       </div>
       <section class="panel install-panel">
         <div class="install-hero">
           <div class="install-logo"><img src="assets/studenthub-mark.svg" alt="StudentHub logo"></div>
           <div>
-            <h2>${standalone ? "StudentHub is already installed" : "Take StudentHub with you"}</h2>
-            <p>${standalone ? "You're currently using the installed StudentHub app." : "Install StudentHub for quick access from your Home Screen."}</p>
+            <h2>${standalone ? "Student Hub App is already installed" : "Take Student Hub App with you"}</h2>
+            <p>${standalone ? "You're currently using the installed Student Hub App." : "Student Hub App for quick access from your Home Screen."}</p>
           </div>
         </div>
         <div class="install-actions">
           <button type="button" class="primary-button install-page-button" id="install-page-button" ${standalone ? "disabled" : ""}>
-            ${standalone ? "✓ Already Installed" : "📱 Install StudentHub"}
+            ${standalone ? "✓ Already Installed" : "📱 Student Hub App"}
           </button>
         </div>
         <div class="install-instructions-grid">
@@ -2084,7 +2084,7 @@ function renderInstallStudentHub() {
         </div>
         <div class="install-note">
           <strong>What you get</strong>
-          <span>StudentHub opens from your Home Screen in its own app-style window with the same account and class data.</span>
+          <span>The Student Hub App opens from your Home Screen in its own app-style window with the same account and class data.</span>
         </div>
       </section>
     </section>
@@ -2102,7 +2102,7 @@ function attachInstallPageEvents() {
   const refresh = () => {
     const installed = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
     button.disabled = installed;
-    button.textContent = installed ? "✓ Already Installed" : "📱 Install StudentHub";
+    button.textContent = installed ? "✓ Already Installed" : "📱 Student Hub App";
   };
   window.addEventListener("studenthub-install-available", refresh);
   window.addEventListener("studenthub-app-installed", refresh);
@@ -2292,7 +2292,7 @@ function getPageTitle() {
     "chapter-tracker":
       "Chapter Tracker",
     progress: "Progress",
-    install: "Install StudentHub",
+    install: "Student Hub App",
     profile: "My Profile",
     account: "Account",
     search: "Search"
