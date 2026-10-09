@@ -4345,10 +4345,7 @@ function renderConversationList() {
     ` : ""}
 
     ${direct.map((conversation) => {
-      const name =
-        conversation.otherMember?.display_name ||
-        conversation.otherMember?.full_name ||
-        "Classmate";
+      const name = getDirectMessageDisplayName(conversation);
 
       return `
         <button
