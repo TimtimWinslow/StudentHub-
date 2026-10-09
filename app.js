@@ -4638,19 +4638,30 @@ async function refreshCurrentConversation() {
 }
 
 async function openConversation(conversationId) {
-  state.currentConversationId = conversationId;
-  state.showNewMessage = false;
-
   const conversation = state.conversations.find(
-    (item) => item.id === conversationId
+    (item) => String(item.id) === String(conversationId)
   );
 
-  state.currentConversationType =
-    conversation?.type === "direct" ? "direct" : "group";
+  if (!conversation) {
+    console.warn("Conversation could not be opened:", conversationId);
+    showMessage("That conversation could not be found. Refresh Messages and try again.", "error");
+    return;
+  }
+
+  state.currentConversationId = conversation.id;
+  state.currentConversationType = conversation.type === "direct" ? "direct" : "group";
+  state.showNewMessage = false;
 
   if (state.currentConversationType === "direct") {
+    // A direct conversation must live on the Messages page. If it was
+    // opened from the Care Team sidebar, update the page state as well so
+    // realtime refreshes do not mistake the private thread for group chat.
+    const pageChanged = state.currentPage !== "messages";
+    state.currentPage = "messages";
+    if (pageChanged) renderAppShell();
     await hydrateDirectMessage();
   } else {
+    state.currentPage = "care-team";
     await hydrateCareTeam();
   }
 }
