@@ -1,4 +1,4 @@
-const CACHE_NAME = "studenthub-shell-v5";
+const CACHE_NAME = "studenthub-shell-v6";
 
 const APP_SHELL = [
   "./",
