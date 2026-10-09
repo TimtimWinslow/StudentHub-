@@ -2169,10 +2169,45 @@ function renderInstallStudentHub() {
             <ol><li>Open StudentHub in your browser.</li><li>Open the browser menu.</li><li>Tap <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</li><li>Confirm.</li></ol>
           </article>
         </div>
+        <div class="install-instructions-grid install-desktop-grid">
+          <article class="install-instruction-card">
+            <div class="install-instruction-icon">💻</div>
+            <h3>Windows / Mac / Chromebook</h3>
+            <ol><li>Open StudentHub in Chrome or Edge.</li><li>Look for the install icon in the address bar, or open the browser menu.</li><li>Choose <strong>Install StudentHub</strong> or <strong>Install page as app</strong>.</li><li>Confirm the install prompt.</li></ol>
+          </article>
+          <article class="install-instruction-card">
+            <div class="install-instruction-icon">🔄</div>
+            <h3>Keep StudentHub Updated</h3>
+            <p>StudentHub checks for updated app files through your browser. After an update, reload the app to use the newest version.</p>
+            <div class="install-update-actions">
+              <button type="button" class="secondary-button" id="check-app-updates">Check for Updates</button>
+              <span id="app-update-status" class="install-update-status" role="status" aria-live="polite">Version v1.0.0</span>
+            </div>
+          </article>
+        </div>
         <div class="install-note">
           <strong>What you get</strong>
-          <span>The Student Hub App opens from your Home Screen in its own app-style window with the same account and class data.</span>
+          <span>Quick Home Screen access in an app-style window, using your existing StudentHub account and class data.</span>
         </div>
+        <section class="install-whats-new">
+          <div>
+            <p class="eyebrow">CURRENT RELEASE</p>
+            <h3>What’s New · v1.0.0</h3>
+          </div>
+          <ul>
+            <li>StudentHub home and student tools in one place.</li>
+            <li>Account sign-in and password reset flows.</li>
+            <li>Care Team messaging and notifications.</li>
+            <li>Installable app experience on supported devices.</li>
+          </ul>
+          <details class="install-help">
+            <summary>Need help installing?</summary>
+            <p><strong>On iPhone or iPad:</strong> use Safari, tap Share, choose Add to Home Screen, then tap Add. If you don’t see the option, scroll through the Share menu.</p>
+            <p><strong>On Android:</strong> open StudentHub in Chrome, tap the three-dot menu, then choose Install app or Add to Home Screen.</p>
+            <p><strong>On a computer:</strong> use Chrome or Edge and look for the install icon near the address bar or the Install option in the browser menu.</p>
+            <p>If installation is unavailable, you can still use StudentHub in your browser.</p>
+          </details>
+        </section>
       </section>
     </section>
   `;
@@ -2180,19 +2215,69 @@ function renderInstallStudentHub() {
 
 function attachInstallPageEvents() {
   const button = $("#install-page-button");
-  if (!button) return;
-  if (!button.disabled) {
-    button.addEventListener("click", () => {
-      if (typeof window.studentHubInstall === "function") window.studentHubInstall();
+  if (button) {
+    const refresh = () => {
+      const installed = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+      button.disabled = installed;
+      button.textContent = installed ? "✓ Already Installed" : "📱 Student Hub App";
+    };
+    if (!button.disabled) {
+      button.addEventListener("click", () => {
+        if (typeof window.studentHubInstall === "function") window.studentHubInstall();
+      });
+    }
+    window.addEventListener("studenthub-install-available", refresh);
+    window.addEventListener("studenthub-app-installed", refresh);
+  }
+
+  const updateButton = $("#check-app-updates");
+  const updateStatus = $("#app-update-status");
+  if (updateButton && updateStatus) {
+    updateButton.addEventListener("click", async () => {
+      if (updateButton.dataset.reload === "true") {
+        window.location.reload();
+        return;
+      }
+      updateButton.disabled = true;
+      updateStatus.textContent = "Checking for updates…";
+      try {
+        if (!("serviceWorker" in navigator)) {
+          updateStatus.textContent = "Your browser updates StudentHub when you reopen it.";
+          return;
+        }
+        const registration = await navigator.serviceWorker.getRegistration("./");
+        if (!registration) {
+          await navigator.serviceWorker.register("./sw.js");
+          updateStatus.textContent = "Update support is now enabled. Reload StudentHub and check again.";
+          return;
+        }
+        registration.addEventListener("updatefound", () => {
+          const worker = registration.installing;
+          if (!worker) return;
+          worker.addEventListener("statechange", () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) {
+              updateStatus.textContent = "A new version is ready. Reload to finish updating.";
+              updateButton.textContent = "Reload StudentHub";
+              updateButton.dataset.reload = "true";
+            }
+          });
+        });
+        await registration.update();
+        if (registration.waiting) {
+          updateStatus.textContent = "A new version is ready. Reload to finish updating.";
+          updateButton.textContent = "Reload StudentHub";
+          updateButton.dataset.reload = "true";
+        } else if (updateButton.dataset.reload !== "true") {
+          updateStatus.textContent = "Check complete. If app files changed, your browser will refresh them; reopen StudentHub if needed.";
+        }
+      } catch (error) {
+        console.error("StudentHub update check failed:", error);
+        updateStatus.textContent = "Couldn’t check right now. Check your connection and try again.";
+      } finally {
+        updateButton.disabled = false;
+      }
     });
   }
-  const refresh = () => {
-    const installed = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
-    button.disabled = installed;
-    button.textContent = installed ? "✓ Already Installed" : "📱 Student Hub App";
-  };
-  window.addEventListener("studenthub-install-available", refresh);
-  window.addEventListener("studenthub-app-installed", refresh);
 }
 
 function renderTopbar() {
