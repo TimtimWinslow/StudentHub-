@@ -5324,3 +5324,19 @@ select:focus-visible {
   .care-team-toolbar-actions{width:100%}
   .care-team-toolbar-actions button{flex:1}
 }
+
+
+/* =========================================================
+   STUDENTHUB APP / INSTALL PAGE
+   ========================================================= */
+.install-page .install-desktop-grid{margin-top:14px}
+.install-update-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.install-update-status{font-size:12px;color:var(--text-muted);line-height:1.5}
+.install-whats-new{display:flex;flex-direction:column;gap:12px;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
+.install-whats-new h3{margin:4px 0 0}
+.install-whats-new ul{margin:0;padding-left:20px;color:var(--text-muted);line-height:1.8}
+.install-help{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:rgba(255,255,255,.025)}
+.install-help summary{font-weight:600;cursor:pointer}
+.install-help p{margin:12px 0 0;color:var(--text-muted);line-height:1.65}
+.install-update-actions button:disabled{opacity:.65;cursor:wait}
+@media(max-width:700px){.install-update-actions{align-items:stretch;flex-direction:column}.install-update-actions button{width:100%}}
