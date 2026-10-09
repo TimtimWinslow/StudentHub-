@@ -4620,7 +4620,7 @@ function renderCareMessage(message) {
   `;
 }
 
-async async async function refreshCurrentConversation() {
+async function refreshCurrentConversation() {
   const conversation = state.conversations.find(
     (item) => String(item.id) === String(state.currentConversationId)
   );
