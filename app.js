@@ -4620,9 +4620,9 @@ function renderCareMessage(message) {
   `;
 }
 
-async function refreshCurrentConversation() {
+async async function refreshCurrentConversation() {
   const conversation = state.conversations.find(
-    (item) => item.id === state.currentConversationId
+    (item) => String(item.id) === String(state.currentConversationId)
   );
 
   if (
