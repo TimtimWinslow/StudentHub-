@@ -2079,7 +2079,7 @@ function renderSidebar() {
         ${navButton(
           "progress",
           "📈",
-          "Progress"
+          "Academic Center"
         )}
 
         ${navButton(
@@ -2493,7 +2493,7 @@ function getPageTitle() {
       "Study Checklist",
     "chapter-tracker":
       "Chapter Tracker",
-    progress: "Progress",
+    progress: "Academic Center",
     install: "Student Hub App",
     profile: "My Profile",
     account: "Account",
@@ -7314,7 +7314,7 @@ function renderProgress() {
       <div class="page-header">
         <div>
           <p class="eyebrow">ACADEMIC PERFORMANCE</p>
-          <h1>Progress</h1>
+          <h1>Academic Center</h1>
           <p>Your scores, averages, GPA, consistency, and chapter progress.</p>
         </div>
         <div class="academic-actions">
