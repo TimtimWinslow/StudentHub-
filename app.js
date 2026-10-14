@@ -4370,6 +4370,16 @@ async function hydrateMessages() {
   });
 }
 
+function getDirectMessageDisplayName(conversation) {
+  const otherMember = conversation?.otherMember;
+  return (
+    otherMember?.display_name ||
+    otherMember?.full_name ||
+    conversation?.name ||
+    "Classmate"
+  );
+}
+
 function renderConversationList() {
   const group = state.conversations.find(
     (conversation) =>
@@ -8137,6 +8147,14 @@ async function saveProfile(event) {
     const file = avatarInput?.files?.[0];
 
     if (file) {
+      const allowedAvatarTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+      if (!allowedAvatarTypes.has(file.type)) {
+        throw new Error("Profile pictures must be JPG, PNG, or WEBP images.");
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Profile pictures must be 5 MB or smaller.");
+      }
+
       const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const safeExtension = ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "jpg";
       const path = state.user.id + "/profile-" + Date.now() + "." + safeExtension;
@@ -8505,7 +8523,7 @@ async function saveSettingsToggle(group, key, enabled) {
   }
 }
 
-function buildExportData() {
+function buildExportData(overrides = {}) {
   return {
     exported_at: new Date().toISOString(),
     account: {
@@ -8522,19 +8540,57 @@ function buildExportData() {
     notifications: state.notifications || [],
     notification_preferences: state.notificationPreferences || null,
     privacy_settings: state.privacySettings || null,
-    care_team_messages: state.careMessages || [],
-    pinned_messages: state.pinnedMessages || [],
-    message_reactions: state.messageReactions || [],
+    care_team_messages: overrides.care_team_messages ?? state.careMessages ?? [],
+    pinned_messages: overrides.pinned_messages ?? state.pinnedMessages ?? [],
+    message_reactions: overrides.message_reactions ?? state.messageReactions ?? [],
     conversations: state.conversations || []
   };
 }
 
+async function loadAllConversationDataForExport() {
+  const conversationIds = [...new Set(
+    (state.conversations || []).map((conversation) => conversation.id).filter(Boolean)
+  )];
+  if (!conversationIds.length) {
+    return { care_team_messages: [], pinned_messages: [], message_reactions: [] };
+  }
+
+  const messagesResult = await supabaseClient
+    .from("messages")
+    .select("*")
+    .in("conversation_id", conversationIds)
+    .order("created_at", { ascending: true });
+  if (messagesResult.error) throw messagesResult.error;
+
+  const messages = messagesResult.data || [];
+  const messageIds = [...new Set(messages.map((message) => message.id).filter(Boolean))];
+  if (!messageIds.length) {
+    return { care_team_messages: messages, pinned_messages: [], message_reactions: [] };
+  }
+
+  const [pinsResult, reactionsResult] = await Promise.all([
+    supabaseClient.from("pinned_messages").select("*").in("message_id", messageIds),
+    supabaseClient.from("message_reactions").select("*").in("message_id", messageIds)
+  ]);
+  const failed = [pinsResult, reactionsResult].find((result) => result.error);
+  if (failed) throw failed.error;
+
+  return {
+    care_team_messages: messages,
+    pinned_messages: pinsResult.data || [],
+    message_reactions: reactionsResult.data || []
+  };
+}
+
 async function exportMyData() {
-  if (!state.user) return;
+  if (!state.user || !supabaseClient) return;
 
   try {
     showMessage("Preparing your data export...");
 
+    // Load conversation membership first so the export can include all conversations,
+    // not only whichever chat happened to be open on screen.
+    await loadCareConversations();
     await Promise.allSettled([
       loadAcademicSummary(),
       loadScoreDetails(),
@@ -8542,14 +8598,12 @@ async function exportMyData() {
       loadAssignments(),
       loadCalendarEvents(),
       loadNotifications(),
-      loadCareMessages(),
-      loadPinnedMessages(),
-      loadMessageReactions(),
-      loadConversations()
+      loadSettings()
     ]);
 
+    const conversationData = await loadAllConversationDataForExport();
     const blob = new Blob(
-      [JSON.stringify(buildExportData(), null, 2)],
+      [JSON.stringify(buildExportData(conversationData), null, 2)],
       { type: "application/json" }
     );
 
@@ -8560,7 +8614,8 @@ async function exportMyData() {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    // Give Safari and iOS browsers time to begin the download before releasing the blob URL.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     showMessage("Your StudentHub data export is ready.");
   } catch (error) {
@@ -9065,6 +9120,18 @@ window.addEventListener(
     );
   }
 );
+
+function toggleTheme() {
+  const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const next = current === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = next;
+  try {
+    localStorage.setItem("studenthub-theme", next);
+  } catch (error) {
+    console.warn("StudentHub could not save the theme preference:", error);
+  }
+  return next;
+}
 
 /* =========================================================
    THEME RESTORE
