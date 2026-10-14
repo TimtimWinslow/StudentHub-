@@ -7693,7 +7693,8 @@ function exportAcademicReportCsv() {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Give Safari (especially iOS) time to start the download before releasing the blob URL.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   showMessage("Academic report exported.");
 }
 
