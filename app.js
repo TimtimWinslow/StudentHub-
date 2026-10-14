@@ -8555,17 +8555,28 @@ async function loadAllConversationDataForExport() {
     return { care_team_messages: [], pinned_messages: [], message_reactions: [] };
   }
 
-  const [messagesResult, pinsResult, reactionsResult] = await Promise.all([
-    supabaseClient.from("messages").select("*").in("conversation_id", conversationIds).order("created_at", { ascending: true }),
-    supabaseClient.from("pinned_messages").select("*").in("conversation_id", conversationIds),
-    supabaseClient.from("message_reactions").select("*").in("conversation_id", conversationIds)
-  ]);
+  const messagesResult = await supabaseClient
+    .from("messages")
+    .select("*")
+    .in("conversation_id", conversationIds)
+    .order("created_at", { ascending: true });
+  if (messagesResult.error) throw messagesResult.error;
 
-  const failed = [messagesResult, pinsResult, reactionsResult].find((result) => result.error);
+  const messages = messagesResult.data || [];
+  const messageIds = [...new Set(messages.map((message) => message.id).filter(Boolean))];
+  if (!messageIds.length) {
+    return { care_team_messages: messages, pinned_messages: [], message_reactions: [] };
+  }
+
+  const [pinsResult, reactionsResult] = await Promise.all([
+    supabaseClient.from("pinned_messages").select("*").in("message_id", messageIds),
+    supabaseClient.from("message_reactions").select("*").in("message_id", messageIds)
+  ]);
+  const failed = [pinsResult, reactionsResult].find((result) => result.error);
   if (failed) throw failed.error;
 
   return {
-    care_team_messages: messagesResult.data || [],
+    care_team_messages: messages,
     pinned_messages: pinsResult.data || [],
     message_reactions: reactionsResult.data || []
   };
