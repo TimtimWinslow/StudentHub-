@@ -5712,3 +5712,351 @@ tr:last-child td {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* =========================================================
+   STUDENTHUB REDESIGN V2 — VISIBLE PAGE-WIDE POLISH
+   Uses the existing navy / blue / teal palette.
+   ========================================================= */
+:root {
+  --radius: 16px;
+  --transition: 180ms ease;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 78% 0%, rgba(25, 118, 210, 0.08), transparent 38%),
+    var(--bg);
+  line-height: 1.55;
+}
+
+.page-container {
+  min-height: calc(100vh - var(--topbar-height));
+  background:
+    radial-gradient(ellipse at 10% 0%, rgba(0, 166, 166, 0.035), transparent 36%);
+}
+
+.page {
+  width: 100%;
+  max-width: 1720px;
+  margin-inline: auto;
+  padding: clamp(20px, 2.6vw, 38px);
+}
+
+.page-header {
+  margin-bottom: 30px;
+}
+
+.page-header h1 {
+  font-size: clamp(27px, 2.6vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-bottom: 12px;
+  padding: 5px 10px;
+  border: 1px solid rgba(0, 166, 166, 0.3);
+  border-radius: 999px;
+  background: rgba(0, 166, 166, 0.09);
+  color: #13baba;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.home-header {
+  padding: 8px 0 4px;
+  margin-bottom: 28px;
+}
+
+.home-header h1 {
+  font-size: clamp(30px, 3.2vw, 44px);
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  margin-bottom: 12px;
+}
+
+.home-header > div > p:last-child {
+  max-width: 620px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.panel {
+  position: relative;
+  min-width: 0;
+  border: 1px solid rgba(29, 70, 98, 0.95);
+  border-radius: 16px;
+  background: linear-gradient(155deg, rgba(16, 43, 66, 0.99), rgba(9, 31, 49, 0.99));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.17);
+  overflow: hidden;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.panel::before {
+  content: "";
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), rgba(25, 118, 210, 0.65), transparent 88%);
+  opacity: 0.9;
+}
+
+.panel:hover {
+  border-color: rgba(0, 166, 166, 0.48);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.22);
+}
+
+.panel-header {
+  min-height: 66px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(29, 70, 98, 0.72);
+  background: rgba(7, 26, 43, 0.22);
+}
+
+.panel-header h2 {
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+
+.panel-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(0, 166, 166, 0.22);
+  border-radius: 11px;
+  background: rgba(0, 166, 166, 0.09);
+}
+
+.panel-body {
+  padding: 20px;
+}
+
+.home-grid {
+  grid-template-columns: minmax(250px, 0.88fr) minmax(360px, 1.55fr) minmax(230px, 0.8fr);
+  gap: 20px;
+}
+
+.status-main {
+  padding: 22px;
+}
+
+.status-average {
+  padding: 17px;
+  margin: 0 0 18px;
+  border: 1px solid rgba(0, 166, 166, 0.2);
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(0, 166, 166, 0.11), rgba(25, 118, 210, 0.06));
+}
+
+.status-average strong {
+  font-size: clamp(34px, 3vw, 42px);
+  letter-spacing: -0.04em;
+}
+
+.status-stats {
+  gap: 11px;
+}
+
+.status-stat,
+.stat-card,
+.grade-breakdown-item {
+  padding: 14px;
+  border: 1px solid rgba(29, 70, 98, 0.85);
+  border-radius: 12px;
+  background: rgba(7, 26, 43, 0.52);
+}
+
+.status-stat strong,
+.stat-card strong {
+  font-size: 18px;
+}
+
+.feed-post {
+  padding: 20px;
+  border-bottom: 1px solid rgba(29, 70, 98, 0.7);
+}
+
+.feed-post:last-child {
+  border-bottom: 0;
+}
+
+.feed-post-content,
+.post-content {
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.nav-item {
+  min-height: 46px;
+  margin-block: 3px;
+  border-radius: 11px;
+  font-weight: 650;
+}
+
+.nav-item.active {
+  border-color: rgba(0, 166, 166, 0.32);
+  background: linear-gradient(100deg, rgba(0, 166, 166, 0.19), rgba(25, 118, 210, 0.09));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.topbar {
+  min-height: var(--topbar-height);
+  padding-inline: clamp(18px, 2.5vw, 34px);
+  background: rgba(7, 26, 43, 0.94);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.09);
+}
+
+.topbar-title {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.topbar-icon-button,
+.topbar-button,
+.account-button,
+.mobile-menu-button {
+  border-radius: 11px;
+}
+
+.primary-button,
+.small-button {
+  border-radius: 11px;
+  font-weight: 750;
+  transition: transform var(--transition), filter var(--transition), box-shadow var(--transition);
+}
+
+.primary-button:hover,
+.small-button:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 5px 16px rgba(0, 166, 166, 0.12);
+}
+
+.primary-button:active,
+.small-button:active {
+  transform: translateY(1px);
+}
+
+.auth-card {
+  border: 1px solid rgba(29, 70, 98, 0.95);
+  border-radius: 22px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.25);
+}
+
+.profile-page-grid,
+.account-grid,
+.settings-grid,
+.progress-grid {
+  gap: 20px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+textarea,
+select {
+  border-radius: 10px;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0b2238;
+}
+
+tbody tr:hover td {
+  background: rgba(0, 166, 166, 0.055);
+}
+
+:where(button, a, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 3px;
+}
+
+@media (min-width: 1400px) {
+  .page {
+    padding-inline: 40px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 16px;
+  }
+
+  .home-grid > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .page {
+    padding: 22px;
+  }
+}
+
+@media (max-width: 800px) {
+  .page {
+    padding: 16px;
+  }
+
+  .home-grid,
+  .profile-page-grid,
+  .account-grid,
+  .settings-grid,
+  .progress-grid,
+  .messages-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .home-grid > * {
+    grid-column: auto;
+  }
+
+  .home-header {
+    margin-bottom: 20px;
+  }
+
+  .home-header h1 {
+    font-size: clamp(27px, 7.8vw, 36px);
+  }
+
+  .panel-header {
+    min-height: 58px;
+    padding: 13px 15px;
+  }
+
+  .panel-body,
+  .status-main {
+    padding: 15px;
+  }
+
+  .feed-post {
+    padding: 16px;
+  }
+
+  .topbar {
+    padding-inline: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
