@@ -8137,6 +8137,14 @@ async function saveProfile(event) {
     const file = avatarInput?.files?.[0];
 
     if (file) {
+      const allowedAvatarTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+      if (!allowedAvatarTypes.has(file.type)) {
+        throw new Error("Profile pictures must be JPG, PNG, or WEBP images.");
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Profile pictures must be 5 MB or smaller.");
+      }
+
       const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const safeExtension = ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "jpg";
       const path = state.user.id + "/profile-" + Date.now() + "." + safeExtension;
@@ -8545,7 +8553,7 @@ async function exportMyData() {
       loadCareMessages(),
       loadPinnedMessages(),
       loadMessageReactions(),
-      loadConversations()
+      loadCareConversations()
     ]);
 
     const blob = new Blob(
@@ -8560,7 +8568,8 @@ async function exportMyData() {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    // Give Safari and iOS browsers time to begin the download before releasing the blob URL.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     showMessage("Your StudentHub data export is ready.");
   } catch (error) {
