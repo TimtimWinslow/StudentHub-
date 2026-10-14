@@ -7280,6 +7280,7 @@ function renderProgress() {
           <button type="button" class="secondary-button" id="print-academic-report">Print Report</button>
         </div>
       </div>
+      ${renderAcademicPageTabs("progress")}
       <div id="progress-content">
         ${renderProgressContent()}
       </div>
@@ -7740,10 +7741,14 @@ async function hydrateAcademicPage(page) {
     attachGradebookEvents();
   } else if (page === "analytics") {
     container.innerHTML = renderAnalytics();
+    attachAcademicPageNavEvents();
+    $("#analytics-print")?.addEventListener("click", printAcademicReport);
   } else if (page === "reports") {
     container.innerHTML = renderAcademicReports();
+    attachAcademicPageNavEvents();
     attachAcademicReportEvents();
   }
+  if (page === "gradebook") attachAcademicPageNavEvents();
 }
 
 function renderAcademicPageTabs(active) {
@@ -7807,7 +7812,17 @@ function renderGradebookRows() {
     <td><span class="grade-status ${row.status}">${row.status === "graded" ? "Graded" : "Pending"}</span></td></tr>`).join("");
 }
 
+function attachAcademicPageNavEvents() {
+  document.querySelectorAll(".academic-tabs [data-page]").forEach(button => {
+    button.addEventListener("click", () => navigate(button.dataset.page));
+  });
+  document.querySelectorAll("#page-container [data-page]").forEach(button => {
+    if (button.dataset.page === "chapter-tracker") button.addEventListener("click", () => navigate("chapter-tracker"));
+  });
+}
+
 function attachGradebookEvents() {
+  attachAcademicPageNavEvents();
   const search = $("#gradebook-search"), filter = $("#gradebook-filter");
   const apply = () => {
     const query = (search?.value || "").trim().toLowerCase();
