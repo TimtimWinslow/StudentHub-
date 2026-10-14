@@ -6307,3 +6307,178 @@ tbody tr:hover td {
   .auth-page { padding: 14px; }
   .auth-card { border-radius: 19px; }
 }
+
+
+/* CLEAN LAYOUT PASS — quieter surfaces, consistent spacing, clearer hierarchy */
+:root {
+  --clean-radius: 12px;
+  --clean-border: rgba(75, 112, 137, .32);
+}
+.page {
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding-top: 26px;
+  padding-bottom: 34px;
+}
+.page-header {
+  margin-bottom: 22px;
+}
+.page-header h1,
+.academic-page-header h1,
+.admin-page-header h1 {
+  letter-spacing: -.035em;
+  line-height: 1.2;
+}
+.page-header p,
+.academic-page-header p {
+  max-width: 68ch;
+  line-height: 1.65;
+}
+.panel,
+.academic-metric-card,
+.analytics-panel,
+.report-summary,
+.report-records-panel,
+.report-method-card,
+.admin-stat-card,
+.admin-panel,
+.settings-panel,
+.profile-preview-panel,
+.profile-edit-panel,
+.messages-page-panel,
+.care-team-panel {
+  border-color: var(--clean-border);
+  border-radius: var(--clean-radius);
+  box-shadow: none;
+}
+.panel-header {
+  padding: 17px 20px;
+}
+.panel-header h2,
+.panel-header h3 {
+  letter-spacing: -.015em;
+}
+.home-quick-actions {
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.home-shortcut {
+  padding: 13px 14px;
+  border-radius: 11px;
+  background: var(--card);
+  transition: border-color .16s ease, background .16s ease;
+}
+.home-shortcut:hover {
+  transform: none;
+  background: var(--card-hover);
+}
+.home-shortcut.shortcut-featured {
+  border-color: var(--clean-border);
+}
+.home-shortcut-icon {
+  border-radius: 9px;
+}
+.academic-tabs,
+.admin-nav {
+  border-radius: 11px;
+  box-shadow: none;
+}
+.academic-tab,
+.admin-nav-button {
+  border-radius: 8px;
+}
+.academic-metric-row,
+.analytics-metric-row,
+.report-summary-grid,
+.report-cards-grid,
+.admin-stat-grid,
+.admin-grid,
+.settings-grid {
+  gap: 12px;
+}
+.academic-metric-card,
+.report-summary,
+.report-records-panel,
+.analytics-panel,
+.report-method-card,
+.admin-panel {
+  padding: 18px;
+}
+.academic-metric-card strong,
+.admin-stat-card strong {
+  letter-spacing: -.035em;
+}
+.gradebook-toolbar {
+  border-radius: var(--clean-radius);
+  box-shadow: none;
+}
+.gradebook-table,
+.gradebook-table th,
+.gradebook-table td {
+  border-color: var(--clean-border);
+}
+.auth-card {
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(0,0,0,.2);
+}
+.profile-preview-panel {
+  background: var(--card);
+}
+.profile-preview-avatar,
+.profile-form-avatar,
+.conversation-avatar {
+  box-shadow: none;
+}
+.profile-photo-editor,
+.settings-account-card,
+.report-formula {
+  border-color: var(--clean-border);
+  border-radius: 10px;
+}
+.messages-page-header,
+.conversation-header,
+.care-team-tools,
+.admin-nav {
+  background: rgba(7,26,43,.22);
+}
+.messages-page-list .conversation-item {
+  padding-inline: 18px;
+}
+.care-team-messages {
+  padding: 16px;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 680px) {
+  .page {
+    padding-top: 18px;
+    padding-bottom: 24px;
+  }
+  .panel-header {
+    padding: 15px 16px;
+  }
+  .academic-metric-card,
+  .report-summary,
+  .report-records-panel,
+  .analytics-panel,
+  .report-method-card,
+  .admin-panel {
+    padding: 15px;
+  }
+  .home-quick-actions {
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+}
