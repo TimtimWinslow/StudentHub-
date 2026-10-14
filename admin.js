@@ -57,22 +57,22 @@ async function toggleAdminStudentStatus(id){
  const next=student.account_status==='suspended'?'active':'suspended';
  if(!confirm(next==='suspended'?'Suspend this student account?':'Reactivate this student account?'))return;
  const {error}=await supabaseClient.from('profiles').update({account_status:next}).eq('id',id);
- if(error)return showToast(error.message,'error');
+ if(error)return showMessage(error.message,'error');
  await adminAudit(next==='suspended'?'suspend_student':'activate_student','profile',id,{account_status:next});
- await loadAdminData(); rerenderAdminContent(); showToast(next==='suspended'?'Student suspended.':'Student activated.','success');
+ await loadAdminData(); rerenderAdminContent(); showMessage(next==='suspended'?'Student suspended.':'Student activated.','success');
 }
 async function toggleAdminRole(id){
- if(String(id)===String(state.user.id))return showToast('You cannot remove your own administrator access here.','error');
+ if(String(id)===String(state.user.id))return showMessage('You cannot remove your own administrator access here.','error');
  const existing=state.adminAdmins.find(a=>String(a.user_id)===String(id));
  if(existing?.active){
   if(!confirm('Remove administrator access from this user?'))return;
   const {error}=await supabaseClient.from('admin_users').update({active:false}).eq('user_id',id);
-  if(error)return showToast(error.message,'error');
+  if(error)return showMessage(error.message,'error');
   await adminAudit('remove_admin','admin_user',id);
  }else{
   if(!confirm('Grant administrator access to this user?'))return;
   const {error}=await supabaseClient.from('admin_users').upsert({user_id:id,active:true},{onConflict:'user_id'});
-  if(error)return showToast(error.message,'error');
+  if(error)return showMessage(error.message,'error');
   await adminAudit('grant_admin','admin_user',id);
  }
  await loadAdminData(); rerenderAdminContent();
@@ -80,23 +80,23 @@ async function toggleAdminRole(id){
 async function adminDeleteMessage(id){
  if(!confirm('Delete this message as an administrator?'))return;
  const {error}=await supabaseClient.from('messages').delete().eq('id',id);
- if(error)return showToast(error.message,'error');
+ if(error)return showMessage(error.message,'error');
  await adminAudit('moderate_delete_message','message',id);
- await loadAdminData(); rerenderAdminContent(); showToast('Message deleted.','success');
+ await loadAdminData(); rerenderAdminContent(); showMessage('Message deleted.','success');
 }
 async function adminToggleFeedPin(id){
  const post=state.adminFeedPosts.find(p=>String(p.id)===String(id)); if(!post)return;
  const {error}=await supabaseClient.from('feed_posts').update({pinned:!post.pinned}).eq('id',id);
- if(error)return showToast(error.message,'error');
+ if(error)return showMessage(error.message,'error');
  await adminAudit(post.pinned?'unpin_feed_post':'pin_feed_post','feed_post',id,{pinned:!post.pinned});
  await loadAdminData(); rerenderAdminContent();
 }
 async function adminDeleteFeed(id){
  if(!confirm('Delete this feed post as an administrator?'))return;
  const {error}=await supabaseClient.from('feed_posts').delete().eq('id',id);
- if(error)return showToast(error.message,'error');
+ if(error)return showMessage(error.message,'error');
  await adminAudit('moderate_delete_feed_post','feed_post',id);
- await loadAdminData(); rerenderAdminContent(); showToast('Feed post deleted.','success');
+ await loadAdminData(); rerenderAdminContent(); showMessage('Feed post deleted.','success');
 }
 function renderAdminClasses(){return '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">🏫</span><h2>Class Management</h2></div></div><div class="admin-form-row"><input id="admin-class-name" class="text-input" placeholder="Class name (example: CNA)"><input id="admin-class-invite" class="text-input" placeholder="Invite code"><button class="primary-button" id="admin-create-class">Create Class</button></div><div class="admin-list">'+(state.adminClasses.map(x=>'<div class="admin-list-row"><div><strong>'+escapeHtml(x.name)+'</strong><small>Invite: '+escapeHtml(x.invite_code||'—')+'</small></div><button class="danger-button small-button" data-admin-delete-class="'+x.id+'">Delete</button></div>').join('')||'<div class="empty-state compact">No classes found.</div>')+'</div></section>';}
 function renderAdminChapters(){return '<section class="panel admin-panel"><div class="panel-header"><div><span class="panel-icon">📖</span><h2>Chapter Management</h2></div></div><div class="admin-form-row"><input id="admin-chapter-number" class="text-input" type="text" inputmode="text" maxlength="30" placeholder="Chapter # (e.g. 9/10)"><input id="admin-chapter-title" class="text-input" placeholder="Chapter title"><button type="button" class="primary-button" id="admin-create-chapter">Add Chapter</button></div><div id="admin-chapter-status" class="form-error" role="status" aria-live="polite"></div><div class="admin-list">'+(state.adminChapters.map(x=>'<div class="admin-list-row"><div><strong>Chapter '+escapeHtml(x.chapter_number)+' — '+escapeHtml(x.title)+'</strong></div><button class="danger-button small-button" data-admin-delete-chapter="'+x.id+'">Delete</button></div>').join('')||'<div class="empty-state compact">No chapters found.</div>')+'</div></section>';}
@@ -117,7 +117,7 @@ async function createAdminEnrollment(){
  const klass=state.adminClasses.find(x=>String(x.id)===String(classId));
  await adminAudit('enroll_student','enrollment',data.id,{student_id:studentId,class_id:classId,student_name:student?.display_name||student?.full_name||'Student',class_name:klass?.name||'Class'});
  await loadAdminData(); rerenderAdminContent();
- showToast('Student enrolled successfully.','success');
+ showMessage('Student enrolled successfully.','success');
 }
 
 async function removeAdminEnrollment(id){
@@ -127,40 +127,40 @@ async function removeAdminEnrollment(id){
  const klass=state.adminClasses.find(x=>String(x.id)===String(enrollment.class_id));
  if(!confirm('Remove '+(student?.display_name||student?.full_name||'this student')+' from '+(klass?.name||'this class')+'?'))return;
  const {error}=await supabaseClient.from('enrollments').delete().eq('id',id);
- if(error)return showToast(error.message,'error');
+ if(error)return showMessage(error.message,'error');
  await adminAudit('remove_student_enrollment','enrollment',id,{student_id:enrollment.student_id,class_id:enrollment.class_id,student_name:student?.display_name||student?.full_name||'Student',class_name:klass?.name||'Class'});
  await loadAdminData(); rerenderAdminContent();
- showToast('Student removed from the class.','success');
+ showMessage('Student removed from the class.','success');
 }
 
-async function createAdminClass(){const name=$('#admin-class-name')?.value.trim();const invite=$('#admin-class-invite')?.value.trim()||null;if(!name)return showToast('Enter a class name.','error');const {data,error}=await supabaseClient.from('classes').insert({name,invite_code:invite,created_by:state.user.id}).select('*').single();if(error)return showToast(error.message,'error');await adminAudit('create_class','class',data.id,{name});await loadAdminData();rerenderAdminContent();}
-async function deleteAdminClass(id){if(!confirm('Delete this class? This may affect enrollments and scores.'))return;const {error}=await supabaseClient.from('classes').delete().eq('id',id);if(error)return showToast(error.message,'error');await adminAudit('delete_class','class',id);await loadAdminData();rerenderAdminContent();}
+async function createAdminClass(){const name=$('#admin-class-name')?.value.trim();const invite=$('#admin-class-invite')?.value.trim()||null;if(!name)return showMessage('Enter a class name.','error');const {data,error}=await supabaseClient.from('classes').insert({name,invite_code:invite,created_by:state.user.id}).select('*').single();if(error)return showMessage(error.message,'error');await adminAudit('create_class','class',data.id,{name});await loadAdminData();rerenderAdminContent();}
+async function deleteAdminClass(id){if(!confirm('Delete this class? This may affect enrollments and scores.'))return;const {error}=await supabaseClient.from('classes').delete().eq('id',id);if(error)return showMessage(error.message,'error');await adminAudit('delete_class','class',id);await loadAdminData();rerenderAdminContent();}
 async function createAdminChapter(){
  const number=$('#admin-chapter-number')?.value.trim();
  const title=$('#admin-chapter-title')?.value.trim();
  const status=$('#admin-chapter-status');
  const button=$('#admin-create-chapter');
  const setStatus=(message,kind='error')=>{if(status){status.textContent=message;status.className=kind==='success'?'form-success':'form-error';}};
- if(!number||!title){setStatus('Enter a chapter number and title.');return showToast('Enter a chapter number and title.','error');}
- if(!/^[\w.-]+(?:\s*\/\s*[\w.-]+)*$/.test(number)){setStatus('Use a chapter number like 9 or 9/10.');return showToast('Use a chapter number like 9 or 9/10.','error');}
+ if(!number||!title){setStatus('Enter a chapter number and title.');return showMessage('Enter a chapter number and title.','error');}
+ if(!/^[\w.-]+(?:\s*\/\s*[\w.-]+)*$/.test(number)){setStatus('Use a chapter number like 9 or 9/10.');return showMessage('Use a chapter number like 9 or 9/10.','error');}
  if(button){button.disabled=true;button.textContent='Adding…';}
  try{
   const {data,error}=await supabaseClient.from('chapters').insert({chapter_number:number,title}).select('*').single();
-  if(error){console.error('Add chapter failed:',error);setStatus('Could not add chapter: '+error.message);showToast(error.message,'error');return;}
+  if(error){console.error('Add chapter failed:',error);setStatus('Could not add chapter: '+error.message);showMessage(error.message,'error');return;}
   await adminAudit('create_chapter','chapter',data.id,{chapter_number:number,title});
   await loadAdminData();
   rerenderAdminContent();
-  showToast('Chapter added successfully.','success');
+  showMessage('Chapter added successfully.','success');
  }catch(error){
   console.error('Add chapter failed:',error);
   setStatus('Could not add chapter: '+(error?.message||String(error)));
-  showToast(error?.message||'Could not add chapter.','error');
+  showMessage(error?.message||'Could not add chapter.','error');
  }finally{
   const currentButton=$('#admin-create-chapter');
   if(currentButton){currentButton.disabled=false;currentButton.textContent='Add Chapter';}
  }
 }
-async function deleteAdminChapter(id){if(!confirm('Delete this chapter? Existing score records may be affected.'))return;const {error}=await supabaseClient.from('chapters').delete().eq('id',id);if(error)return showToast(error.message,'error');await adminAudit('delete_chapter','chapter',id);await loadAdminData();rerenderAdminContent();}
+async function deleteAdminChapter(id){if(!confirm('Delete this chapter? Existing score records may be affected.'))return;const {error}=await supabaseClient.from('chapters').delete().eq('id',id);if(error)return showMessage(error.message,'error');await adminAudit('delete_chapter','chapter',id);await loadAdminData();rerenderAdminContent();}
 async function sendAdminAnnouncement(){const title=$('#admin-announcement-title')?.value.trim();const body=$('#admin-announcement-body')?.value.trim();const status=$('#admin-announcement-status');if(!title||!body){if(status)status.textContent='Enter a title and message.';return;}const {data:users,error:ue}=await supabaseClient.from('profiles').select('id');if(ue){if(status)status.textContent=ue.message;return;}const rows=(users||[]).map(u=>({user_id:u.id,title,message:body,notification_type:'announcement',metadata:{admin_user_id:state.user.id}}));const {error}=await supabaseClient.from('notifications').insert(rows);if(error){if(status)status.textContent=error.message;return;}await adminAudit('send_announcement','notification',null,{title,recipient_count:rows.length});if(status){status.className='form-success';status.textContent='Announcement sent to the class.';}}
 function rerenderAdminContent(){const c=$('#admin-content');if(!c)return;let content=renderAdminDashboard();if(state.adminSection==='students')content=renderAdminStudents();if(state.adminSection==='classes')content=renderAdminClasses();if(state.adminSection==='chapters')content=renderAdminChapters();if(state.adminSection==='announcements')content=renderAdminAnnouncements();if(state.adminSection==='moderation')content=renderAdminModeration();if(state.adminSection==='admins')content=renderAdminAdmins();if(state.adminSection==='audit')content=renderAdminAudit();if(state.adminSection==='settings')content=renderAdminSettings();c.innerHTML=content;attachAdminEvents();}
 function attachAdminEvents(){document.querySelectorAll('[data-admin-section]').forEach(b=>b.addEventListener('click',()=>{state.adminSection=b.dataset.adminSection||'dashboard';rerenderAdminContent();}));$('#admin-create-class')?.addEventListener('click',createAdminClass);
@@ -172,7 +172,7 @@ function attachAdminEvents(){document.querySelectorAll('[data-admin-section]').f
  document.querySelectorAll('[data-admin-toggle-feed-pin]').forEach(b=>b.addEventListener('click',()=>adminToggleFeedPin(b.dataset.adminToggleFeedPin)));
  document.querySelectorAll('[data-admin-delete-feed]').forEach(b=>b.addEventListener('click',()=>adminDeleteFeed(b.dataset.adminDeleteFeed)));
 }
-async function hydrateAdmin(){if(!state.isAdmin)return;try{await loadAdminData();attachAdminEvents();}catch(error){console.error('Admin load error:',error);showToast(error?.message||'Unable to load admin data.','error');}}
+async function hydrateAdmin(){if(!state.isAdmin)return;try{await loadAdminData();attachAdminEvents();}catch(error){console.error('Admin load error:',error);showMessage(error?.message||'Unable to load admin data.','error');}}
 
 /* =========================================================
    STUDENTHUB ADMIN — COMPLETE CONTROL CENTER
@@ -277,7 +277,7 @@ function adminExportAllData() {
   };
   adminDownload(`studenthub-admin-export-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload, null, 2));
   adminAudit("export_admin_data", "system", null, { record_groups: Object.keys(payload).length });
-  showToast("Admin data export downloaded.", "success");
+  showMessage("Admin data export downloaded.", "success");
 }
 
 function renderAdmin() {
@@ -423,7 +423,7 @@ async function adminSaveScore() {
   const chapterId = $("#admin-score-chapter")?.value;
   const score = Number($("#admin-score-value")?.value);
   const testDate = $("#admin-score-date")?.value || new Date().toISOString().slice(0,10);
-  if (!userId || !classId || !chapterId || Number.isNaN(score) || score < 0 || score > 100) return showToast("Choose a student, class, chapter, and score from 0–100.","error");
+  if (!userId || !classId || !chapterId || Number.isNaN(score) || score < 0 || score > 100) return showMessage("Choose a student, class, chapter, and score from 0–100.","error");
 
   const existing = (state.adminScores || []).find((item) =>
     String(item.user_id) === String(userId) &&
@@ -435,16 +435,16 @@ async function adminSaveScore() {
     const confirmed = confirm("A score already exists for this student's chapter. Update the existing score instead?");
     if (!confirmed) return;
     const {data,error}=await supabaseClient.from("scores").update({score,test_date:testDate}).eq("id",existing.id).select("*").single();
-    if(error)return showToast(error.message,"error");
+    if(error)return showMessage(error.message,"error");
     await adminAudit("admin_update_score","score",data.id,{student_id:userId,class_id:classId,chapter_id:Number(chapterId),score,test_date:testDate});
-    await loadAdminData(); rerenderAdminContent(); showToast("Score updated.","success");
+    await loadAdminData(); rerenderAdminContent(); showMessage("Score updated.","success");
     return;
   }
 
   const {data,error}=await supabaseClient.from("scores").insert({user_id:userId,class_id:classId,chapter_id:Number(chapterId),score,test_date:testDate}).select("*").single();
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("admin_create_score","score",data.id,{student_id:userId,class_id:classId,chapter_id:Number(chapterId),score,test_date:testDate});
-  await loadAdminData(); rerenderAdminContent(); showToast("Score saved.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Score saved.","success");
 }
 
 async function adminEditScore(id) {
@@ -453,29 +453,29 @@ async function adminEditScore(id) {
   const value = prompt("Score (0–100):", String(score.score));
   if (value === null) return;
   const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) return showToast("Enter a score from 0–100.","error");
+  if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) return showMessage("Enter a score from 0–100.","error");
   const date = prompt("Test date (YYYY-MM-DD):", score.test_date || new Date().toISOString().slice(0,10));
   if (date === null) return;
   const {data,error}=await supabaseClient.from("scores").update({score:numeric,test_date:date}).eq("id",id).select("*").single();
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("admin_update_score","score",id,{student_id:score.user_id,class_id:score.class_id,chapter_id:score.chapter_id,old_score:score.score,score:numeric,test_date:date});
-  await loadAdminData(); rerenderAdminContent(); showToast("Score updated.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Score updated.","success");
 }
 
 async function adminDeleteScore(id) {
   if(!confirm("Delete this score record?"))return;
   const {error}=await supabaseClient.from("scores").delete().eq("id",id);
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("admin_delete_score","score",id);
-  await loadAdminData(); rerenderAdminContent(); showToast("Score deleted.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Score deleted.","success");
 }
 
 async function adminDeleteAssignment(id) {
   if(!confirm("Delete this assignment as an administrator?"))return;
   const {error}=await supabaseClient.from("assignments").delete().eq("id",id);
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("admin_delete_assignment","assignment",id);
-  await loadAdminData(); rerenderAdminContent(); showToast("Assignment deleted.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Assignment deleted.","success");
 }
 
 async function adminCreateEvent() {
@@ -484,20 +484,20 @@ async function adminCreateEvent() {
   const location=$("#admin-event-location")?.value.trim() || null;
   const eventType=$("#admin-event-type")?.value || "class";
   const classWide=!!$("#admin-event-classwide")?.checked;
-  if(!title||!date)return showToast("Enter an event title and date.","error");
+  if(!title||!date)return showMessage("Enter an event title and date.","error");
   const payload={user_id:classWide?null:state.user.id,title,description:null,start_time:`${date}T12:00:00`,location,event_type:eventType,created_by:state.user.id,is_class_wide:classWide};
   const {data,error}=await supabaseClient.from("calendar_events").insert(payload).select("*").single();
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("admin_create_calendar_event","calendar_event",data.id,{title,event_type:eventType,start_time:payload.start_time});
-  await loadAdminData(); rerenderAdminContent(); showToast("Calendar event created.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Calendar event created.","success");
 }
 
 async function adminDeleteEvent(id) {
   if(!confirm("Delete this calendar event?"))return;
   const {error}=await supabaseClient.from("calendar_events").delete().eq("id",id);
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("admin_delete_calendar_event","calendar_event",id);
-  await loadAdminData(); rerenderAdminContent(); showToast("Calendar event deleted.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Calendar event deleted.","success");
 }
 
 function attachAdminEvents() {
@@ -536,7 +536,7 @@ async function hydrateAdmin() {
     attachAdminEvents();
   } catch(error) {
     console.error("Admin load error:",error);
-    showToast(error?.message||"Unable to load admin data.","error");
+    showMessage(error?.message||"Unable to load admin data.","error");
   }
 }
 
@@ -561,9 +561,9 @@ async function adminEditClass(id) {
   if(!name?.trim())return;
   const invite=prompt("Invite code:",klass.invite_code||"");
   const {error}=await supabaseClient.from("classes").update({name:name.trim(),invite_code:invite?.trim()||null}).eq("id",id);
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("edit_class","class",id,{name:name.trim()});
-  await loadAdminData(); rerenderAdminContent(); showToast("Class updated.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Class updated.","success");
 }
 
 async function adminEditChapter(id) {
@@ -572,19 +572,19 @@ async function adminEditChapter(id) {
   const title=prompt("Chapter title:",chapter.title||"");
   if(!title?.trim())return;
   const number=prompt("Chapter number (use 9/10 for a combined test):",String(chapter.chapter_number ?? ""))?.trim();
-  if(!number||!/^[\w.-]+(?:\s*\/\s*[\w.-]+)*$/.test(number))return showToast("Enter a chapter number like 9 or 9/10.","error");
+  if(!number||!/^[\w.-]+(?:\s*\/\s*[\w.-]+)*$/.test(number))return showMessage("Enter a chapter number like 9 or 9/10.","error");
   const {error}=await supabaseClient.from("chapters").update({chapter_number:number,title:title.trim()}).eq("id",id);
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("edit_chapter","chapter",id,{chapter_number:number,title:title.trim()});
-  await loadAdminData(); rerenderAdminContent(); showToast("Chapter updated.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Chapter updated.","success");
 }
 
 async function adminUnpinMessage(pinId,messageId) {
   if(!confirm("Unpin this Care Team message?"))return;
   const {error}=await supabaseClient.from("pinned_messages").delete().eq("id",pinId);
-  if(error)return showToast(error.message,"error");
+  if(error)return showMessage(error.message,"error");
   await adminAudit("admin_unpin_message","pinned_message",pinId,{message_id:messageId});
-  await loadAdminData(); rerenderAdminContent(); showToast("Message unpinned.","success");
+  await loadAdminData(); rerenderAdminContent(); showMessage("Message unpinned.","success");
 }
 
 function renderAdminClasses() {
@@ -644,7 +644,7 @@ function rerenderAdminContent() {
 async function adminUpdateReport(id,status) {
  const note=prompt("Admin note (optional):","")||null;
  const {error}=await supabaseClient.from("message_reports").update({status,admin_note:note,reviewed_by:state.user.id,reviewed_at:new Date().toISOString()}).eq("id",id);
- if(error)return showToast(error.message,"error");
+ if(error)return showMessage(error.message,"error");
  await adminAudit("update_message_report","message_report",id,{status});
- await loadAdminData(); rerenderAdminContent(); showToast("Report updated.","success");
+ await loadAdminData(); rerenderAdminContent(); showMessage("Report updated.","success");
 }
