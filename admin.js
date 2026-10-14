@@ -65,6 +65,8 @@ async function toggleAdminRole(id){
  if(String(id)===String(state.user.id))return showMessage('You cannot remove your own administrator access here.','error');
  const existing=state.adminAdmins.find(a=>String(a.user_id)===String(id));
  if(existing?.active){
+  const activeAdminCount=state.adminAdmins.filter(a=>a.active).length;
+  if(activeAdminCount<=1)return showMessage('You cannot remove the last active administrator. Grant another admin first.','error');
   if(!confirm('Remove administrator access from this user?'))return;
   const {error}=await supabaseClient.from('admin_users').update({active:false}).eq('user_id',id);
   if(error)return showMessage(error.message,'error');
