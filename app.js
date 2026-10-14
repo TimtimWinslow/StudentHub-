@@ -7631,6 +7631,63 @@ function renderProgressContent() {
   `;
 }
 
+function printAcademicReport() {
+  const metrics = getProgressMetrics();
+  const currentClass = getCurrentClass();
+  const reportWindow = window.open("", "_blank");
+
+  if (!reportWindow) {
+    showMessage("Your browser blocked the report window. Allow pop-ups for StudentHub and try again.");
+    return;
+  }
+
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[character]);
+  const scoreRows = metrics.scores.length
+    ? metrics.scores.map((score) => `<tr><td>${escapeHtml(score.chapter_number ?? "—")}</td><td>${escapeHtml(score.chapter_title || "Chapter")}</td><td>${Number(score.score).toFixed(2)}%</td><td>${escapeHtml(score.letter_grade || calculateLetterGrade(score.score))}</td><td>${escapeHtml(score.test_date ? new Date(score.test_date).toLocaleDateString() : "—")}</td></tr>`).join("")
+    : '<tr><td colspan="5">No test scores recorded yet.</td></tr>';
+  const chapterRows = metrics.chapters.length
+    ? metrics.chapters.map((chapter) => {
+        const score = metrics.scores.find((item) => String(item.chapter_id) === String(chapter.id));
+        return `<tr><td>${escapeHtml(chapter.chapter_number ?? "—")}</td><td>${escapeHtml(chapter.title || "Chapter")}</td><td>${score ? Number(score.score).toFixed(2) + "%" : "—"}</td><td>${score ? escapeHtml(score.letter_grade || calculateLetterGrade(score.score)) : "—"}</td><td>${score ? "Complete" : "Pending"}</td></tr>`;
+      }).join("")
+    : '<tr><td colspan="5">No chapters available.</td></tr>';
+
+  reportWindow.document.open();
+  reportWindow.document.write(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StudentHub Academic Report</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6f9;margin:0;padding:20px}
+main{max-width:950px;margin:0 auto;background:#fff;padding:28px;border-radius:12px;box-shadow:0 2px 12px #10203018}
+h1{margin:0 0 5px;color:#12334a}h2{margin:28px 0 10px;color:#12334a;font-size:18px}.muted{color:#526477;margin:0 0 22px}
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.metric{border:1px solid #d8e2e9;border-radius:8px;padding:12px}.metric span{display:block;color:#526477;font-size:12px}.metric strong{display:block;font-size:21px;margin-top:4px}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px;border-bottom:1px solid #dce4ea}th{background:#eaf3f5;color:#12334a}button{border:0;border-radius:7px;padding:11px 16px;background:#087f8c;color:white;font-weight:600;font-size:15px;margin:0 8px 22px 0;cursor:pointer}.actions{margin-top:22px}
+@media(max-width:600px){body{padding:10px}main{padding:16px}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}table{min-width:560px}}
+@media print{body{padding:0;background:white}main{max-width:none;padding:0;box-shadow:none;border-radius:0}.actions{display:none}h2{break-after:avoid}tr{break-inside:avoid}table{font-size:10pt}.table-wrap{overflow:visible}}
+</style></head><body><main>
+<h1>StudentHub Academic Report</h1><p class="muted">${escapeHtml(currentClass ? getClassLabel(currentClass) : "All classes")} · Generated ${escapeHtml(new Date().toLocaleString())}</p>
+<div class="actions"><button type="button" onclick="window.print()">Print this report</button><button type="button" onclick="window.close()">Close report</button><p class="muted">If the print dialog does not open automatically, tap “Print this report.” On iPhone, you can also use Share and choose Print.</p></div>
+<div class="summary">
+<div class="metric"><span>Overall Average</span><strong>${metrics.average == null ? "—" : metrics.average.toFixed(2) + "%"}</strong></div>
+<div class="metric"><span>GPA (4.0 scale)</span><strong>${metrics.gpa == null ? "—" : metrics.gpa.toFixed(2)}</strong></div>
+<div class="metric"><span>Letter Grade</span><strong>${metrics.average == null ? "—" : escapeHtml(calculateLetterGrade(metrics.average))}</strong></div>
+<div class="metric"><span>Score Consistency</span><strong>${metrics.consistency == null ? "—" : metrics.consistency.toFixed(1) + "%"}</strong></div>
+<div class="metric"><span>Tests Completed</span><strong>${metrics.totalTests}</strong></div>
+<div class="metric"><span>Passing Tests (80%+)</span><strong>${metrics.scores.filter((item) => Number(item.score) >= 80).length}</strong></div>
+<div class="metric"><span>Chapters Completed</span><strong>${metrics.completedChapters}</strong></div>
+<div class="metric"><span>Chapters Pending</span><strong>${metrics.pendingChapters}</strong></div>
+</div>
+<h2>Test Scores</h2><div class="table-wrap"><table><thead><tr><th>Chapter</th><th>Title</th><th>Score</th><th>Grade</th><th>Test Date</th></tr></thead><tbody>${scoreRows}</tbody></table></div>
+<h2>Chapter Status</h2><div class="table-wrap"><table><thead><tr><th>Chapter</th><th>Title</th><th>Score</th><th>Grade</th><th>Status</th></tr></thead><tbody>${chapterRows}</tbody></table></div>
+</main></body></html>`);
+  reportWindow.document.close();
+  window.setTimeout(() => {
+    try { reportWindow.focus(); reportWindow.print(); } catch (error) { /* The printable report remains open for manual printing. */ }
+  }, 500);
+}
+
 function exportAcademicReportCsv() {
   const metrics = getProgressMetrics();
   const currentClass = getCurrentClass();
@@ -7716,7 +7773,7 @@ async function hydrateProgress() {
   });
 
   $("#export-academic-report")?.addEventListener("click", exportAcademicReportCsv);
-  $("#print-academic-report")?.addEventListener("click", () => window.print());
+  $("#print-academic-report")?.addEventListener("click", printAcademicReport);
 }
 
 /* =========================================================
