@@ -8523,7 +8523,7 @@ async function saveSettingsToggle(group, key, enabled) {
   }
 }
 
-function buildExportData() {
+function buildExportData(overrides = {}) {
   return {
     exported_at: new Date().toISOString(),
     account: {
@@ -8540,19 +8540,46 @@ function buildExportData() {
     notifications: state.notifications || [],
     notification_preferences: state.notificationPreferences || null,
     privacy_settings: state.privacySettings || null,
-    care_team_messages: state.careMessages || [],
-    pinned_messages: state.pinnedMessages || [],
-    message_reactions: state.messageReactions || [],
+    care_team_messages: overrides.care_team_messages ?? state.careMessages ?? [],
+    pinned_messages: overrides.pinned_messages ?? state.pinnedMessages ?? [],
+    message_reactions: overrides.message_reactions ?? state.messageReactions ?? [],
     conversations: state.conversations || []
   };
 }
 
+async function loadAllConversationDataForExport() {
+  const conversationIds = [...new Set(
+    (state.conversations || []).map((conversation) => conversation.id).filter(Boolean)
+  )];
+  if (!conversationIds.length) {
+    return { care_team_messages: [], pinned_messages: [], message_reactions: [] };
+  }
+
+  const [messagesResult, pinsResult, reactionsResult] = await Promise.all([
+    supabaseClient.from("messages").select("*").in("conversation_id", conversationIds).order("created_at", { ascending: true }),
+    supabaseClient.from("pinned_messages").select("*").in("conversation_id", conversationIds),
+    supabaseClient.from("message_reactions").select("*").in("conversation_id", conversationIds)
+  ]);
+
+  const failed = [messagesResult, pinsResult, reactionsResult].find((result) => result.error);
+  if (failed) throw failed.error;
+
+  return {
+    care_team_messages: messagesResult.data || [],
+    pinned_messages: pinsResult.data || [],
+    message_reactions: reactionsResult.data || []
+  };
+}
+
 async function exportMyData() {
-  if (!state.user) return;
+  if (!state.user || !supabaseClient) return;
 
   try {
     showMessage("Preparing your data export...");
 
+    // Load conversation membership first so the export can include all conversations,
+    // not only whichever chat happened to be open on screen.
+    await loadCareConversations();
     await Promise.allSettled([
       loadAcademicSummary(),
       loadScoreDetails(),
@@ -8560,14 +8587,12 @@ async function exportMyData() {
       loadAssignments(),
       loadCalendarEvents(),
       loadNotifications(),
-      loadCareMessages(),
-      loadPinnedMessages(),
-      loadMessageReactions(),
-      loadCareConversations()
+      loadSettings()
     ]);
 
+    const conversationData = await loadAllConversationDataForExport();
     const blob = new Blob(
-      [JSON.stringify(buildExportData(), null, 2)],
+      [JSON.stringify(buildExportData(conversationData), null, 2)],
       { type: "application/json" }
     );
 
