@@ -4302,8 +4302,8 @@ function renderDirectConversationList() {
             type="button"
           >
             <span class="conversation-avatar">
-              ${conversation.otherMember?.avatar_url
-                ? `<img src="${escapeHtml(conversation.otherMember.avatar_url)}" alt="" />`
+              ${getProfileAvatarUrl(conversation.otherMember)
+                ? `<img src="${escapeHtml(getProfileAvatarUrl(conversation.otherMember))}" alt="" />`
                 : escapeHtml(getInitials(name))}
             </span>
             <span class="conversation-item-text">
@@ -4410,8 +4410,8 @@ function renderConversationList() {
           type="button"
         >
           <span class="conversation-avatar">
-            ${conversation.otherMember?.avatar_url
-              ? `<img src="${escapeHtml(conversation.otherMember.avatar_url)}" alt="" />`
+            ${getProfileAvatarUrl(conversation.otherMember)
+              ? `<img src="${escapeHtml(getProfileAvatarUrl(conversation.otherMember))}" alt="" />`
               : escapeHtml(getInitials(name))}
           </span>
           <span class="conversation-item-text">
@@ -4456,7 +4456,7 @@ function renderCareMembers() {
     const name = member.display_name || member.full_name || "Student";
     return `
       <div class="care-member-row">
-        <div class="avatar small">${member.avatar_url ? `<img src="${escapeHtml(member.avatar_url)}" alt="" />` : escapeHtml(getInitials(name))}</div>
+        <div class="avatar small">${getProfileAvatarUrl(member) ? `<img src="${escapeHtml(getProfileAvatarUrl(member))}" alt="" />` : escapeHtml(getInitials(name))}</div>
         <div class="care-member-info"><strong>${escapeHtml(name)}${member.id === state.user?.id ? " (You)" : ""}</strong><span>${member.id === state.user?.id ? "You" : renderPresenceBadge(member.id)}</span></div>
       </div>
     `;
@@ -4481,8 +4481,8 @@ function renderClassmateList(classmates) {
         type="button"
       >
         <span class="conversation-avatar">
-          ${classmate.avatar_url
-            ? `<img src="${escapeHtml(classmate.avatar_url)}" alt="" />`
+          ${getProfileAvatarUrl(classmate)
+            ? `<img src="${escapeHtml(getProfileAvatarUrl(classmate))}" alt="" />`
             : escapeHtml(getInitials(name))}
         </span>
         <span>
@@ -4745,7 +4745,7 @@ function renderDirectMessageConversation() {
         <div class="conversation-header">
           <div class="conversation-header-avatar">
             ${conversation?.otherMember?.avatar_url
-              ? `<img src="${escapeHtml(conversation.otherMember.avatar_url)}" alt="" />`
+              ? `<img src="${escapeHtml(getProfileAvatarUrl(conversation.otherMember))}" alt="" />`
               : escapeHtml(getInitials(name))}
           </div>
           <div>
@@ -8293,6 +8293,9 @@ async function saveSettingsToggle(group, key, enabled) {
 
       if (error) throw error;
       state.privacySettings = data;
+      if (key === "show_online_status") {
+        await updatePresence(enabled ? (document.hidden ? "idle" : "online") : "offline");
+      }
       state.publicPrivacySettings = {
         ...(state.publicPrivacySettings || {}),
         [String(state.user.id)]: {
