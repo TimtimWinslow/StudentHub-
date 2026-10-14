@@ -2398,8 +2398,11 @@ function getPageTitle() {
       "Study Checklist",
     "chapter-tracker":
       "Chapter Tracker",
-    progress: "Academic Center",
-    install: "Student Hub App",
+    progress: "Academic Overview",
+    gradebook: "Detailed Gradebook",
+    analytics: "Performance Analytics",
+    reports: "Reports & Calculations",
+    install: "Install StudentHub",
     profile: "My Profile",
     account: "Account",
     search: "Search"
@@ -2762,6 +2765,12 @@ function renderHome() {
 
       </div>
 
+      <div class="home-quick-actions" aria-label="Academic shortcuts">
+        <button type="button" class="home-shortcut shortcut-featured" data-page="progress"><span class="home-shortcut-icon">▦</span><span><strong>Academic Overview</strong><small>Average, GPA & chapter progress</small></span><span class="shortcut-arrow">↗</span></button>
+        <button type="button" class="home-shortcut" data-page="gradebook"><span class="home-shortcut-icon">▤</span><span><strong>Gradebook</strong><small>Review every score</small></span><span class="shortcut-arrow">↗</span></button>
+        <button type="button" class="home-shortcut" data-page="analytics"><span class="home-shortcut-icon">⌁</span><span><strong>Analytics</strong><small>Explore score trends</small></span><span class="shortcut-arrow">↗</span></button>
+        <button type="button" class="home-shortcut" data-page="reports"><span class="home-shortcut-icon">▧</span><span><strong>Reports</strong><small>Print or export results</small></span><span class="shortcut-arrow">↗</span></button>
+      </div>
       <div class="home-grid">
 
         <section class="panel status-panel">
