@@ -7317,18 +7317,22 @@ function renderProgress() {
           <h1>Progress</h1>
           <p>Your scores, averages, GPA, consistency, and chapter progress.</p>
         </div>
-        ${state.classes.length > 1 ? `
-          <div class="progress-class-picker">
-            <label class="field-label" for="progress-class">Class</label>
-            <select id="progress-class" class="text-input">
-              ${state.classes.map((classItem) => `
-                <option value="${escapeHtml(classItem.id)}" ${String(classItem.id) === String(state.currentClassId) ? "selected" : ""}>
-                  ${escapeHtml(getClassLabel(classItem))}
-                </option>
-              `).join("")}
-            </select>
-          </div>
-        ` : ""}
+        <div class="academic-actions">
+          ${state.classes.length > 1 ? `
+            <div class="progress-class-picker">
+              <label class="field-label" for="progress-class">Class</label>
+              <select id="progress-class" class="text-input">
+                ${state.classes.map((classItem) => `
+                  <option value="${escapeHtml(classItem.id)}" ${String(classItem.id) === String(state.currentClassId) ? "selected" : ""}>
+                    ${escapeHtml(getClassLabel(classItem))}
+                  </option>
+                `).join("")}
+              </select>
+            </div>
+          ` : ""}
+          <button type="button" class="secondary-button" id="export-academic-report">Export CSV</button>
+          <button type="button" class="secondary-button" id="print-academic-report">Print Report</button>
+        </div>
       </div>
       <div id="progress-content">
         ${renderProgressContent()}
@@ -7627,6 +7631,72 @@ function renderProgressContent() {
   `;
 }
 
+function exportAcademicReportCsv() {
+  const metrics = getProgressMetrics();
+  const currentClass = getCurrentClass();
+  const rows = [
+    ["Section", "Metric", "Value", "Chapter", "Title", "Score", "Letter Grade", "Test Date"],
+    ["Summary", "Class", currentClass ? getClassLabel(currentClass) : "All classes", "", "", "", "", ""],
+    ["Summary", "Generated", new Date().toLocaleString(), "", "", "", "", ""],
+    ["Summary", "Overall Average", metrics.average == null ? "—" : metrics.average.toFixed(2) + "%", "", "", "", "", ""],
+    ["Summary", "GPA (4.0 scale)", metrics.gpa == null ? "—" : metrics.gpa.toFixed(2), "", "", "", "", ""],
+    ["Summary", "Letter Grade", metrics.average == null ? "—" : calculateLetterGrade(metrics.average), "", "", "", "", ""],
+    ["Summary", "Score Consistency", metrics.consistency == null ? "—" : metrics.consistency.toFixed(1) + "%", "", "", "", "", ""],
+    ["Summary", "Tests Completed", String(metrics.totalTests), "", "", "", "", ""],
+    ["Summary", "Passing Tests (80%+)", String(metrics.scores.filter((item) => Number(item.score) >= 80).length), "", "", "", "", ""],
+    ["Summary", "Chapters Completed", String(metrics.completedChapters), "", "", "", "", ""],
+    ["Summary", "Chapters Pending", String(metrics.pendingChapters), "", "", "", "", ""],
+    ["", "", "", "", "", "", "", ""],
+    ["Test", "", "", "Chapter", "Title", "Score", "Letter Grade", "Test Date"]
+  ];
+
+  metrics.scores.forEach((score) => {
+    rows.push([
+      "Test",
+      "",
+      "",
+      String(score.chapter_number ?? "—"),
+      String(score.chapter_title || "Chapter"),
+      Number(score.score).toFixed(2) + "%",
+      score.letter_grade || calculateLetterGrade(score.score),
+      score.test_date ? new Date(score.test_date).toLocaleDateString() : "—"
+    ]);
+  });
+
+  rows.push(["", "", "", "", "", "", "", ""]);
+  rows.push(["Chapter Status", "", "", "Chapter", "Title", "Score", "Letter Grade", "Status"]);
+  metrics.chapters.forEach((chapter) => {
+    const score = metrics.scores.find((item) => String(item.chapter_id) === String(chapter.id));
+    rows.push([
+      "Chapter Status",
+      "",
+      "",
+      String(chapter.chapter_number ?? "—"),
+      String(chapter.title || "Chapter"),
+      score ? Number(score.score).toFixed(2) + "%" : "—",
+      score ? (score.letter_grade || calculateLetterGrade(score.score)) : "—",
+      score ? "Complete" : "Pending"
+    ]);
+  });
+
+  const csvCell = (value) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const safeClassName = (currentClass ? getClassLabel(currentClass) : "all-classes")
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "academic-report";
+  link.href = url;
+  link.download = `studenthub-${safeClassName}-academic-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showMessage("Academic report exported.");
+}
+
 async function hydrateProgress() {
   await Promise.all([
     loadClasses(),
@@ -7643,6 +7713,9 @@ async function hydrateProgress() {
     storeCurrentClassId(state.currentClassId);
     if (container) container.innerHTML = renderProgressContent();
   });
+
+  $("#export-academic-report")?.addEventListener("click", exportAcademicReportCsv);
+  $("#print-academic-report")?.addEventListener("click", () => window.print());
 }
 
 /* =========================================================
