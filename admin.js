@@ -142,7 +142,7 @@ async function createAdminChapter(){
  const button=$('#admin-create-chapter');
  const setStatus=(message,kind='error')=>{if(status){status.textContent=message;status.className=kind==='success'?'form-success':'form-error';}};
  if(!number||!title){setStatus('Enter a chapter number and title.');return showToast('Enter a chapter number and title.','error');}
- if(!/^[\\w.-]+(?:\\s*\\/\\s*[\\w.-]+)*$/.test(number)){setStatus('Use a chapter number like 9 or 9/10.');return showToast('Use a chapter number like 9 or 9/10.','error');}
+ if(!/^[\w.-]+(?:\s*\/\s*[\w.-]+)*$/.test(number)){setStatus('Use a chapter number like 9 or 9/10.');return showToast('Use a chapter number like 9 or 9/10.','error');}
  if(button){button.disabled=true;button.textContent='Adding…';}
  try{
   const {data,error}=await supabaseClient.from('chapters').insert({chapter_number:number,title}).select('*').single();
