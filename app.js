@@ -1992,141 +1992,46 @@ function renderActiveUsers() {
    ========================================================= */
 
 function renderSidebar() {
+  const studyPages = ["flashcards", "quiz-maker", "study-timer", "study-checklist", "chapter-tracker"];
+  const studyExpanded = studyPages.includes(state.currentPage);
   return `
     <aside class="sidebar" id="sidebar">
-
       <div class="sidebar-brand">
         <div class="brand-mark"><img src="assets/studenthub-mark.svg" alt="StudentHub logo" /></div>
-
-        <div class="brand-text">
-          <strong>StudentHub</strong>
-          <span>CNA Student Hub</span>
-        </div>
+        <div class="brand-text"><strong>StudentHub</strong><span>CNA Student Hub</span></div>
       </div>
-
       <nav class="sidebar-nav">
-
-        ${navButton(
-          "home",
-          "🏠",
-          "Home"
-        )}
-
-        ${navButton(
-          "calendar",
-          "📅",
-          "Calendar"
-        )}
-
-        ${navButton(
-          "assignments",
-          "📝",
-          "Assignments"
-        )}
-
-        ${navButton(
-          "notifications",
-          "🔔",
-          "Notifications"
-        )}
-
-        ${navButton(
-          "search",
-          "🔎",
-          "Search"
-        )}
-
-        ${navButton(
-          "care-team",
-          "💬",
-          "The Care Team"
-        )}
-
-        <div class="nav-section-label">
-          STUDY TOOLS
+        <div class="nav-section-label">WORKSPACE</div>
+        ${navButton("home","⌂","Home")}
+        ${navButton("notifications","♧","Notifications")}
+        ${navButton("messages","✉","Messages")}
+        ${navButton("care-team","♡","The Care Team")}
+        ${navButton("search","⌕","Search")}
+        <div class="nav-section-label">ACADEMICS</div>
+        ${navButton("progress","▦","Academic Overview")}
+        ${navButton("gradebook","▤","Gradebook")}
+        ${navButton("analytics","↗","Performance Analytics")}
+        ${navButton("reports","▧","Reports & Calculations")}
+        <div class="nav-section-label">LEARNING</div>
+        <button class="nav-item study-tools-toggle ${studyExpanded ? "active" : ""}" id="study-tools-toggle" type="button" aria-expanded="${studyExpanded}">
+          <span class="nav-icon">✦</span><span>Study Tools</span><span class="nav-chevron">${studyExpanded ? "⌄" : "›"}</span>
+        </button>
+        <div class="sidebar-subnav" id="study-tools-nav" ${studyExpanded ? "" : "hidden"}>
+          ${navButton("chapter-tracker","▣","Chapter Tracker")}
+          ${navButton("flashcards","▤","Flashcards")}
+          ${navButton("quiz-maker","✓","Quiz Maker")}
+          ${navButton("study-timer","◷","Study Timer")}
+          ${navButton("study-checklist","☑","Study Checklist")}
         </div>
-
-        ${navButton(
-          "flashcards",
-          "🧠",
-          "Flashcards"
-        )}
-
-        ${navButton(
-          "quiz-maker",
-          "📝",
-          "Quiz Maker"
-        )}
-
-        ${navButton(
-          "study-timer",
-          "⏱️",
-          "Study Timer"
-        )}
-
-        ${navButton(
-          "study-checklist",
-          "✅",
-          "Study Checklist"
-        )}
-
-        ${navButton(
-          "chapter-tracker",
-          "📖",
-          "Chapter Tracker"
-        )}
-
-        ${navButton(
-          "progress",
-          "📈",
-          "Academic Center"
-        )}
-
-        ${navButton(
-          "install",
-          "📱",
-          "Student Hub App"
-        )}
-
-        ${
-          state.isAdmin
-            ? `
-              <div class="nav-section-label">
-                ADMIN
-              </div>
-              ${navButton("admin", "🛡️", "Admin")}
-            `
-            : ""
-        }
-
+        ${navButton("install","▣","Install StudentHub")}
+        ${state.isAdmin ? `<div class="nav-section-label">ADMINISTRATION</div>${navButton("admin","⬡","Admin Console")}` : ""}
       </nav>
-
       <div class="sidebar-footer">
-
         <div class="sidebar-user">
-
-          <div class="avatar">
-            ${escapeHtml(
-              getInitials(
-                getDisplayName()
-              )
-            )}
-          </div>
-
-          <div class="sidebar-user-info">
-            <strong>
-              ${escapeHtml(
-                getDisplayName()
-              )}
-            </strong>
-
-            <span class="role-badge ${state.isAdmin ? "admin" : "student"}">${state.isAdmin ? "🛡️ Administrator" : "🎓 Student"}</span>
-          </div>
-
+          <div class="avatar">${escapeHtml(getInitials(getDisplayName()))}</div>
+          <div class="sidebar-user-info"><strong>${escapeHtml(getDisplayName())}</strong><span class="role-badge ${state.isAdmin ? "admin" : "student"}">${state.isAdmin ? "🛡️ Administrator" : "🎓 Student"}</span></div>
         </div>
-
       </div>
-
     </aside>
   `;
 }
@@ -2493,8 +2398,11 @@ function getPageTitle() {
       "Study Checklist",
     "chapter-tracker":
       "Chapter Tracker",
-    progress: "Academic Center",
-    install: "Student Hub App",
+    progress: "Academic Overview",
+    gradebook: "Detailed Gradebook",
+    analytics: "Performance Analytics",
+    reports: "Reports & Calculations",
+    install: "Install StudentHub",
     profile: "My Profile",
     account: "Account",
     search: "Search"
@@ -2547,6 +2455,15 @@ function renderAppShell() {
 }
 
 function attachShellEvents() {
+  $("#study-tools-toggle")?.addEventListener("click", () => {
+    const submenu = $("#study-tools-nav");
+    const toggle = $("#study-tools-toggle");
+    if (!submenu || !toggle) return;
+    submenu.hidden = !submenu.hidden;
+    toggle.setAttribute("aria-expanded", String(!submenu.hidden));
+    const chevron = toggle.querySelector(".nav-chevron");
+    if (chevron) chevron.textContent = submenu.hidden ? "›" : "⌄";
+  });
   document
     .querySelectorAll("[data-page]")
     .forEach((button) => {
@@ -2718,6 +2635,15 @@ function renderPageContent() {
     case "progress":
       return renderProgress();
 
+    case "gradebook":
+      return renderGradebook();
+
+    case "analytics":
+      return renderAnalytics();
+
+    case "reports":
+      return renderAcademicReports();
+
     case "install":
       return renderInstallStudentHub();
 
@@ -2782,8 +2708,8 @@ async function hydratePage(page) {
     await hydrateChapterTracker();
   }
 
-  if (page === "progress") {
-    await hydrateProgress();
+  if (["progress", "gradebook", "analytics", "reports"].includes(page)) {
+    await hydrateAcademicPage(page);
   }
 
   if (page === "install") {
@@ -2839,6 +2765,12 @@ function renderHome() {
 
       </div>
 
+      <div class="home-quick-actions" aria-label="Academic shortcuts">
+        <button type="button" class="home-shortcut shortcut-featured" data-page="progress"><span class="home-shortcut-icon">▦</span><span><strong>Academic Overview</strong><small>Average, GPA & chapter progress</small></span><span class="shortcut-arrow">↗</span></button>
+        <button type="button" class="home-shortcut" data-page="gradebook"><span class="home-shortcut-icon">▤</span><span><strong>Gradebook</strong><small>Review every score</small></span><span class="shortcut-arrow">↗</span></button>
+        <button type="button" class="home-shortcut" data-page="analytics"><span class="home-shortcut-icon">⌁</span><span><strong>Analytics</strong><small>Explore score trends</small></span><span class="shortcut-arrow">↗</span></button>
+        <button type="button" class="home-shortcut" data-page="reports"><span class="home-shortcut-icon">▧</span><span><strong>Reports</strong><small>Print or export results</small></span><span class="shortcut-arrow">↗</span></button>
+      </div>
       <div class="home-grid">
 
         <section class="panel status-panel">
@@ -7357,6 +7289,7 @@ function renderProgress() {
           <button type="button" class="secondary-button" id="print-academic-report">Print Report</button>
         </div>
       </div>
+      ${renderAcademicPageTabs("progress")}
       <div id="progress-content">
         ${renderProgressContent()}
       </div>
@@ -7797,6 +7730,175 @@ async function hydrateProgress() {
 
   $("#export-academic-report")?.addEventListener("click", exportAcademicReportCsv);
   $("#print-academic-report")?.addEventListener("click", printAcademicReport);
+}
+
+
+/* =========================================================
+   ACADEMIC CENTER — DETAILED VIEWS
+   ========================================================= */
+
+async function hydrateAcademicPage(page) {
+  await Promise.all([loadClasses(), loadAcademicSummary(), loadScoreDetails(), loadChapters()]);
+  if (page === "progress") {
+    await hydrateProgress();
+    return;
+  }
+  const container = $("#page-container");
+  if (!container) return;
+  if (page === "gradebook") {
+    container.innerHTML = renderGradebook();
+    attachGradebookEvents();
+  } else if (page === "analytics") {
+    container.innerHTML = renderAnalytics();
+    attachAcademicPageNavEvents();
+    $("#analytics-print")?.addEventListener("click", printAcademicReport);
+  } else if (page === "reports") {
+    container.innerHTML = renderAcademicReports();
+    attachAcademicPageNavEvents();
+    attachAcademicReportEvents();
+  }
+}
+
+function renderAcademicPageTabs(active) {
+  const tabs = [
+    ["progress","Overview"],["gradebook","Gradebook"],["analytics","Analytics"],["reports","Reports"]
+  ];
+  return `<nav class="academic-tabs" aria-label="Academic Center sections">${tabs.map(([page,label]) =>
+    `<button type="button" class="academic-tab ${active === page ? "active" : ""}" data-page="${page}" ${active === page ? 'aria-current="page"' : ""}>${label}</button>`
+  ).join("")}</nav>`;
+}
+
+function renderGradebook() {
+  const metrics = getProgressMetrics();
+  const scores = metrics.scores;
+  const chapters = metrics.chapters;
+  const graded = new Set(scores.map(s => String(s.chapter_id)));
+  const average = metrics.average == null ? "—" : metrics.average.toFixed(2) + "%";
+  const pending = Math.max(chapters.length - graded.size, 0);
+  return `
+    <section class="page academic-page">
+      <div class="page-header academic-page-header">
+        <div><p class="eyebrow">ACADEMIC CENTER / RECORDS</p><h1>Detailed Gradebook</h1><p>Every recorded assessment in one clear, searchable view.</p></div>
+        <div class="academic-header-actions"><button type="button" class="secondary-button" id="gradebook-export">Export CSV</button><button type="button" class="primary-button" data-page="chapter-tracker">＋ Add Score</button></div>
+      </div>
+      ${renderAcademicPageTabs("gradebook")}
+      <div class="academic-metric-row">
+        <article class="academic-metric-card"><span>Overall average</span><strong>${average}</strong><small>Based on recorded scores</small></article>
+        <article class="academic-metric-card"><span>Assessments recorded</span><strong>${scores.length}</strong><small>Official score entries</small></article>
+        <article class="academic-metric-card"><span>Chapters pending</span><strong>${pending}</strong><small>Not included as scores</small></article>
+      </div>
+      <section class="panel gradebook-panel">
+        <div class="gradebook-toolbar">
+          <div><h2>Assessment records</h2><p>Ungraded chapters remain pending and do not affect your average.</p></div>
+          <div class="gradebook-filters"><label class="sr-only" for="gradebook-search">Search gradebook</label><input id="gradebook-search" class="text-input" type="search" placeholder="Search chapter or score…"><label class="sr-only" for="gradebook-filter">Filter gradebook</label><select id="gradebook-filter" class="text-input"><option value="all">All chapters</option><option value="graded">Graded only</option><option value="pending">Pending only</option></select></div>
+        </div>
+        <div class="gradebook-table-wrap"><table class="gradebook-table"><thead><tr><th>Assessment</th><th>Date</th><th>Score</th><th>Letter</th><th>Status</th></tr></thead><tbody id="gradebook-rows">${renderGradebookRows()}</tbody></table></div>
+        <div class="gradebook-footnote"><span class="status-dot"></span> Only saved assessment scores count toward your current calculations.</div>
+      </section>
+    </section>`;
+}
+
+function renderGradebookRows() {
+  const metrics = getProgressMetrics();
+  const chapters = metrics.chapters || [];
+  const scores = metrics.scores || [];
+  const rows = chapters.map(chapter => {
+    const score = scores.find(item => String(item.chapter_id) === String(chapter.id));
+    const name = "Chapter " + (chapter.chapter_number ?? "—") + " · " + (chapter.title || "Assessment");
+    return {name, date: score ? formatDate(score.test_date) : "—", value: score ? Number(score.score) : null, letter: score ? calculateLetterGrade(score.score) : "—", status: score ? "graded" : "pending"};
+  });
+  scores.forEach(score => {
+    if (!chapters.some(chapter => String(chapter.id) === String(score.chapter_id))) {
+      rows.push({name:"Chapter " + (score.chapter_number ?? "—") + " · " + (score.chapter_title || "Assessment"),date:formatDate(score.test_date),value:Number(score.score),letter:calculateLetterGrade(score.score),status:"graded"});
+    }
+  });
+  if (!rows.length) return '<tr><td colspan="5"><div class="empty-state compact"><p>No chapters or scores are available yet.</p></div></td></tr>';
+  return rows.map(row => `<tr data-gradebook-row data-status="${row.status}" data-search="${escapeHtml((row.name + " " + row.date + " " + (row.value ?? "")).toLowerCase())}">
+    <td><div class="gradebook-assessment"><span class="gradebook-assessment-icon">${row.status === "graded" ? "✓" : "○"}</span><div><strong>${escapeHtml(row.name)}</strong><small>${row.status === "graded" ? "Official assessment" : "Waiting for score"}</small></div></div></td>
+    <td>${escapeHtml(row.date)}</td><td><strong class="${row.value != null && row.value < 80 ? "score-warning" : ""}">${row.value == null ? "—" : row.value.toFixed(2) + "%"}</strong></td>
+    <td>${row.letter === "—" ? "—" : `<span class="grade-pill ${getLetterClass(row.letter)}">${row.letter}</span>`}</td>
+    <td><span class="grade-status ${row.status}">${row.status === "graded" ? "Graded" : "Pending"}</span></td></tr>`).join("");
+}
+
+function attachAcademicPageNavEvents() {
+  document.querySelectorAll(".academic-tabs [data-page]").forEach(button => {
+    button.addEventListener("click", () => navigate(button.dataset.page));
+  });
+  document.querySelectorAll("#page-container [data-page]").forEach(button => {
+    if (button.dataset.page === "chapter-tracker") button.addEventListener("click", () => navigate("chapter-tracker"));
+  });
+}
+
+function attachGradebookEvents() {
+  const search = $("#gradebook-search"), filter = $("#gradebook-filter");
+  const apply = () => {
+    const query = (search?.value || "").trim().toLowerCase();
+    const status = filter?.value || "all";
+    document.querySelectorAll("[data-gradebook-row]").forEach(row => {
+      row.hidden = (status !== "all" && row.dataset.status !== status) || !row.dataset.search.includes(query);
+    });
+  };
+  search?.addEventListener("input", apply);
+  filter?.addEventListener("change", apply);
+  $("#gradebook-export")?.addEventListener("click", exportAcademicReportCsv);
+}
+
+function renderAnalytics() {
+  const m = getProgressMetrics();
+  const scores = [...m.scores].reverse();
+  const average = m.average == null ? "—" : m.average.toFixed(2) + "%";
+  const gpa = m.gpa == null ? "—" : m.gpa.toFixed(2);
+  const best = m.highest == null ? "—" : m.highest.toFixed(2) + "%";
+  const consistency = m.consistency == null ? "—" : m.consistency.toFixed(1) + "%";
+  const dist = m.gradeDistribution;
+  const maxDist = Math.max(1, ...Object.values(dist));
+  return `
+    <section class="page academic-page">
+      <div class="page-header academic-page-header"><div><p class="eyebrow">ACADEMIC CENTER / INSIGHTS</p><h1>Performance Analytics</h1><p>See your grade patterns, consistency, and progress over time.</p></div><button type="button" class="secondary-button" id="analytics-print">Print analytics</button></div>
+      ${renderAcademicPageTabs("analytics")}
+      <div class="academic-metric-row analytics-metric-row">
+        <article class="academic-metric-card featured"><span>Overall average</span><strong>${average}</strong><small>Across saved scores</small></article>
+        <article class="academic-metric-card"><span>GPA · 4.0 scale</span><strong>${gpa}</strong><small>Average grade points</small></article>
+        <article class="academic-metric-card"><span>Highest score</span><strong>${best}</strong><small>Personal best</small></article>
+        <article class="academic-metric-card"><span>Score Consistency</span><strong>${consistency}</strong><small>Higher means scores vary less</small></article>
+      </div>
+      <div class="analytics-grid">
+        <section class="panel analytics-panel"><div class="panel-header"><div><span class="panel-icon">↗</span><h2>Score trend</h2></div><span class="panel-caption">Assessment by assessment</span></div>
+          ${scores.length ? `<div class="analytics-trend">${scores.map((s,i) => `<div class="analytics-trend-row"><div class="analytics-trend-label"><span>Ch. ${escapeHtml(s.chapter_number ?? (i+1))}</span><strong>${Number(s.score).toFixed(1)}%</strong></div><div class="analytics-track"><span style="width:${Math.max(0,Math.min(100,Number(s.score)))}%"></span></div><small>${escapeHtml(formatDate(s.test_date))}</small></div>`).join("")}</div>` : '<div class="empty-state compact"><p>Your trend will appear after you save a score.</p></div>'}
+        </section>
+        <section class="panel analytics-panel"><div class="panel-header"><div><span class="panel-icon">▥</span><h2>Grade distribution</h2></div><span class="panel-caption">Recorded tests</span></div>
+          <div class="distribution-list">${["A","B","C","D","F"].map(grade => `<div class="distribution-row"><span class="grade-pill ${getLetterClass(grade)}">${grade}</span><div class="distribution-track"><span style="width:${(dist[grade]/maxDist)*100}%"></span></div><strong>${dist[grade]}</strong></div>`).join("")}</div>
+          <div class="analytics-insight"><strong>${m.passing == null ? "Awaiting first score" : m.passing ? "You're above the 80% passing benchmark" : "Your average is below 80%"}</strong><p>${m.totalTests ? `${m.totalTests} recorded assessment${m.totalTests === 1 ? "" : "s"} included. Pending chapters are excluded.` : "Save an official assessment score to start building your analytics."}</p></div>
+        </section>
+      </div>
+    </section>`;
+}
+
+function renderAcademicReports() {
+  const m = getProgressMetrics();
+  const average = m.average == null ? "—" : m.average.toFixed(2) + "%";
+  const gpa = m.gpa == null ? "—" : m.gpa.toFixed(2);
+  return `
+    <section class="page academic-page">
+      <div class="page-header academic-page-header"><div><p class="eyebrow">ACADEMIC CENTER / EXPORTS</p><h1>Reports & Calculations</h1><p>Review how your results are calculated and create a report to save or print.</p></div><div class="academic-header-actions"><button type="button" class="secondary-button" id="reports-print">Print report</button><button type="button" class="primary-button" id="reports-export">Export CSV</button></div></div>
+      ${renderAcademicPageTabs("reports")}
+      <section class="report-summary panel"><div class="report-summary-heading"><div><span class="panel-icon">▧</span><div><h2>Academic summary</h2><p>Generated ${escapeHtml(new Date().toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"}))}</p></div></div><span class="report-status">Current record</span></div>
+        <div class="report-summary-grid"><div><span>Overall percentage average</span><strong>${average}</strong></div><div><span>GPA · 4.0 scale</span><strong>${gpa}</strong></div><div><span>Assessments counted</span><strong>${m.totalTests}</strong></div><div><span>Chapters pending</span><strong>${m.pendingChapters}</strong></div></div>
+      </section>
+      <div class="report-cards-grid">
+        <article class="panel report-method-card"><div class="report-card-icon">%</div><h3>Percentage average</h3><p>The arithmetic mean of saved assessment scores. Chapters without a score are excluded.</p><div class="report-formula">${m.totalTests ? m.scores.map(s => Number(s.score).toFixed(2)).join(" + ") + " ÷ " + m.totalTests + " = " + average : "No saved scores yet"}</div></article>
+        <article class="panel report-method-card"><div class="report-card-icon">🎓</div><h3>GPA calculation</h3><p>Each assessment is converted to grade points using the app's current scale, then the points are averaged.</p><div class="report-formula">A = 4 · B = 3 · C = 2 · D = 1 · F = 0</div></article>
+        <article class="panel report-method-card"><div class="report-card-icon">↗</div><h3>Score consistency</h3><p>A variability-based indicator of how close recorded scores are to one another. It is not a grade or GPA.</p><div class="report-formula">${m.consistency == null ? "Need at least two scores" : m.consistency.toFixed(1) + "% consistency indicator"}</div></article>
+      </div>
+      <section class="panel report-records-panel"><div class="panel-header"><div><span class="panel-icon">▤</span><h2>Included assessments</h2></div><span class="panel-caption">${m.totalTests} saved</span></div><div class="report-record-list">${m.scores.length ? m.scores.map(s => `<div class="report-record"><div><strong>Chapter ${escapeHtml(s.chapter_number ?? "—")}</strong><small>${escapeHtml(s.chapter_title || "Assessment")} · ${escapeHtml(formatDate(s.test_date))}</small></div><strong>${Number(s.score).toFixed(2)}%</strong></div>`).join("") : '<div class="empty-state compact"><p>No saved assessments to report yet.</p></div>'}</div></section>
+      <p class="report-disclaimer">StudentHub calculations are a personal progress aid. Your school's official grading policy determines your final course grade.</p>
+    </section>`;
+}
+
+function attachAcademicReportEvents() {
+  $("#reports-export")?.addEventListener("click", exportAcademicReportCsv);
+  $("#reports-print")?.addEventListener("click", printAcademicReport);
+  $("#analytics-print")?.addEventListener("click", printAcademicReport);
 }
 
 /* =========================================================
