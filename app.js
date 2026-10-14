@@ -4370,6 +4370,16 @@ async function hydrateMessages() {
   });
 }
 
+function getDirectMessageDisplayName(conversation) {
+  const otherMember = conversation?.otherMember;
+  return (
+    otherMember?.display_name ||
+    otherMember?.full_name ||
+    conversation?.name ||
+    "Classmate"
+  );
+}
+
 function renderConversationList() {
   const group = state.conversations.find(
     (conversation) =>
@@ -9074,6 +9084,18 @@ window.addEventListener(
     );
   }
 );
+
+function toggleTheme() {
+  const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const next = current === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = next;
+  try {
+    localStorage.setItem("studenthub-theme", next);
+  } catch (error) {
+    console.warn("StudentHub could not save the theme preference:", error);
+  }
+  return next;
+}
 
 /* =========================================================
    THEME RESTORE
