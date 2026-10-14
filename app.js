@@ -3903,6 +3903,9 @@ async function loadCareConversations() {
     .select("*")
     .eq("type", "group")
     .eq("name", "The Care Team")
+    // Pick the oldest matching group consistently if legacy duplicate rows exist.
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (!groupError && groupConversation && !conversations.some((item) => item.id === groupConversation.id)) {
@@ -5052,8 +5055,18 @@ async function handleCareMessageSubmit(
 }
 
 async function sendCareMessage(content) {
-  if (!supabaseClient || !state.user || !state.currentConversationId)
+  if (!supabaseClient || !state.user) {
+    showMessage("Please sign in again before sending a message.", "error");
     return false;
+  }
+
+  if (!state.currentConversationId) {
+    showMessage(
+      "The Care Team conversation did not load. Refresh the page and try again.",
+      "error"
+    );
+    return false;
+  }
 
   const conversation = state.conversations.find(
     (item) => item.id === state.currentConversationId
