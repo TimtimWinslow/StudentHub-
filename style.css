@@ -29,6 +29,21 @@
   --transition: 0.2s ease;
 }
 
+/* Optional light appearance. The default remains the existing navy/teal theme. */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f7fa;
+  --bg-secondary: #e8f0f5;
+  --card: #ffffff;
+  --card-hover: #f0f7fa;
+  --border: #c8d9e4;
+  --text: #152f40;
+  --text-secondary: #496575;
+  --text-muted: #667f8f;
+  --accent: #087f85;
+  --accent-hover: #066a70;
+}
+
 /* =========================================================
    RESET
    ========================================================= */
