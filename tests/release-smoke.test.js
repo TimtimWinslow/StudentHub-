@@ -88,13 +88,13 @@ test("data export calls existing loaders and preserves Safari downloads", () => 
   assert.ok(exportStart >= 0, "exportMyData should exist");
   const exportEnd = app.indexOf("async function handleAccountAction", exportStart);
   const exportFunction = app.slice(exportStart, exportEnd);
-  assert.match(exportFunction, /loadCareConversations\\(\\)/);
-  assert.doesNotMatch(exportFunction, /loadConversations\\(\\)/);
-  assert.match(exportFunction, /setTimeout\\(\\(\\) => URL\\.revokeObjectURL\\(url\\), 1000\\)/);
+  assert.ok(exportFunction.includes("loadCareConversations()"));
+  assert.ok(!exportFunction.includes("loadConversations()"));
+  assert.ok(exportFunction.includes("setTimeout(() => URL.revokeObjectURL(url), 1000)"));
 });
 
 test("profile picture uploads validate file type and size", () => {
   const app = read("app.js");
-  assert.match(app, /allowedAvatarTypes = new Set\\(\\["image\\/jpeg", "image\\/png", "image\\/webp"\\]\\)/);
-  assert.match(app, /file\\.size > 5 \\* 1024 \\* 1024/);
+  assert.ok(app.includes('allowedAvatarTypes = new Set(["image/jpeg", "image/png", "image/webp"])'));
+  assert.ok(app.includes("file.size > 5 * 1024 * 1024"));
 });
