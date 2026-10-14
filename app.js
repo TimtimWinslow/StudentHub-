@@ -7380,6 +7380,22 @@ function getProgressMetrics() {
   const standardDeviation = deviations.length ? Math.sqrt(deviations.reduce((sum, value) => sum + value, 0) / deviations.length) : 0;
   const calculatedConsistency = scores.length > 1 ? Math.max(0, Math.min(100, 100 - standardDeviation)) : null;
   const consistency = calculatedConsistency != null ? calculatedConsistency : (summary.score_consistency != null ? Number(summary.score_consistency) : null);
+  // Match the dashboard's 4.0 GPA method: convert each recorded test to grade points,
+  // then average those points. Do not convert the overall percentage average only.
+  const gpa = scores.length
+    ? scores.reduce((sum, item) => {
+        const storedPoints = item.grade_points;
+        const points = storedPoints != null && Number.isFinite(Number(storedPoints))
+          ? Number(storedPoints)
+          : calculateGPA(item.score);
+        return sum + points;
+      }, 0) / scores.length
+    : null;
+  const gradeDistribution = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+  scores.forEach((item) => {
+    const grade = calculateLetterGrade(item.score);
+    gradeDistribution[grade] = (gradeDistribution[grade] || 0) + 1;
+  });
 
   return {
     scores,
@@ -7391,6 +7407,8 @@ function getProgressMetrics() {
     completedChapters,
     pendingChapters,
     consistency,
+    gpa,
+    gradeDistribution,
     totalTests: scores.length,
     standardDeviation,
     passing: average != null ? average >= 80 : null
@@ -7418,8 +7436,8 @@ function renderProgressContent() {
     ? metrics.average.toFixed(2)
     : "—";
 
-  const gpa = metrics.average != null
-    ? calculateGPA(metrics.average).toFixed(2)
+  const gpa = metrics.gpa != null
+    ? metrics.gpa.toFixed(2)
     : (
         summary.GPA != null
           ? Number(summary.GPA).toFixed(2)
@@ -7482,6 +7500,33 @@ function renderProgressContent() {
           <div class="stat-card"><span>Lowest Score</span><strong>${metrics.lowest != null ? metrics.lowest.toFixed(2) + "%" : "—"}</strong></div>
           <div class="stat-card"><span>Highest Score</span><strong>${metrics.highest != null ? metrics.highest.toFixed(2) + "%" : "—"}</strong></div>
         </div>
+      </div>
+
+      <div class="panel progress-grade-panel">
+        <div class="panel-header">
+          <div><span class="panel-icon">🏅</span><h2>Grade Breakdown</h2></div>
+          <span class="assignment-count">${metrics.totalTests} total tests</span>
+        </div>
+        ${metrics.totalTests ? `
+          <div class="grade-breakdown-grid">
+            ${["A", "B", "C", "D", "F"].map((grade) => {
+              const count = metrics.gradeDistribution[grade] || 0;
+              const percent = metrics.totalTests ? Math.round((count / metrics.totalTests) * 100) : 0;
+              return `
+                <div class="grade-breakdown-item">
+                  <div class="grade-breakdown-label">
+                    <span class="grade-pill ${getLetterClass(grade)}">${grade}</span>
+                    <strong>${count}</strong>
+                  </div>
+                  <div class="grade-breakdown-track" role="img" aria-label="${grade}: ${count} tests, ${percent}%">
+                    <span style="width:${percent}%"></span>
+                  </div>
+                  <small>${percent}% of tests</small>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        ` : `<div class="empty-state compact"><p>No grades to break down yet.</p></div>`}
       </div>
 
       <div class="panel progress-trend-panel">
