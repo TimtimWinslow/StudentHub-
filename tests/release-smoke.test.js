@@ -98,3 +98,12 @@ test("profile picture uploads validate file type and size", () => {
   assert.ok(app.includes('allowedAvatarTypes = new Set(["image/jpeg", "image/png", "image/webp"])'));
   assert.ok(app.includes("file.size > 5 * 1024 * 1024"));
 });
+
+test("release security migration scopes private messaging by membership", () => {
+  const sql = read("supabase/v1_0_release_security_hardening.sql");
+  assert.ok(sql.includes("private.studenthub_is_conversation_member"));
+  assert.ok(sql.includes("Conversation members can read messages"));
+  assert.ok(sql.includes("Conversation members can view membership"));
+  assert.ok(sql.includes("Conversation creators can add members"));
+  assert.ok(!/create policy "Care Team messages are readable by authenticated users"[\\s\\S]*?using \\(true\\)/i.test(sql));
+});
