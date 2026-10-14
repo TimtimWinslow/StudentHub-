@@ -6190,3 +6190,18 @@ tbody tr:hover td {
   .gradebook-filters { flex-direction: column; }
   .gradebook-filters select { width: 100%; }
 }
+
+
+/* HOME SHORTCUTS */
+.home-quick-actions { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 0 0 20px; }
+.home-shortcut { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 15px; border: 1px solid var(--academic-line); border-radius: 14px; background: linear-gradient(145deg,var(--academic-surface-raised),var(--academic-surface)); color: var(--text); text-align: left; cursor: pointer; transition: transform .18s ease,border-color .18s ease,background .18s ease; }
+.home-shortcut:hover { transform: translateY(-2px); border-color: rgba(0,166,166,.6); background: linear-gradient(145deg,#123b53,#0c253b); }
+.home-shortcut.shortcut-featured { border-color: rgba(0,166,166,.45); }
+.home-shortcut-icon { display: grid; place-items: center; flex: 0 0 37px; width: 37px; height: 37px; border-radius: 11px; color: #71e1db; background: rgba(0,166,166,.13); font-size: 18px; }
+.home-shortcut > span:nth-child(2) { min-width: 0; flex: 1; }
+.home-shortcut strong,.home-shortcut small { display: block; }
+.home-shortcut strong { font-size: 12px; line-height: 1.4; }
+.home-shortcut small { margin-top: 4px; color: var(--academic-muted); font-size: 10px; line-height: 1.4; }
+.shortcut-arrow { align-self: flex-start; color: #68ddd6; font-size: 14px; }
+@media (max-width: 1000px) { .home-quick-actions { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 480px) { .home-quick-actions { gap: 8px; } .home-shortcut { padding: 12px; gap: 8px; } .home-shortcut-icon { flex-basis: 31px; width: 31px; height: 31px; } .home-shortcut small { font-size: 9px; } }
