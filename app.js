@@ -87,6 +87,7 @@ const state = {
 
   notificationPreferences: null,
   privacySettings: null,
+  publicPrivacySettings: {},
 
   currentClassId: null,
   calendarDate: new Date(),
@@ -237,6 +238,18 @@ function calculateGPA(score) {
   if (numericScore >= 60) return 1;
 
   return 0;
+}
+
+function getProfileAvatarUrl(profile) {
+  if (!profile?.avatar_url) return "";
+  if (profile.id && state.user && String(profile.id) === String(state.user.id)) return profile.avatar_url;
+  const preferences = profile.id ? state.publicPrivacySettings?.[String(profile.id)] : null;
+  return preferences?.show_profile_picture === false ? "" : profile.avatar_url;
+}
+
+function getPublicPrivacySettings(userId) {
+  if (!userId) return null;
+  return state.publicPrivacySettings?.[String(userId)] || null;
 }
 
 function showLoading(message = "Loading StudentHub...") {
@@ -628,6 +641,7 @@ function resetState() {
 
   state.notificationPreferences = null;
   state.privacySettings = null;
+  state.publicPrivacySettings = {};
 
   state.currentClassId = null;
 }
@@ -1461,6 +1475,7 @@ function renderFeed() {
             profile.display_name ||
             profile.full_name ||
             "Student";
+          const avatarUrl = getProfileAvatarUrl(profile);
 
           return `
             <article
@@ -1472,10 +1487,10 @@ function renderFeed() {
 
                 <div class="avatar">
                   ${
-                    profile.avatar_url
+                    avatarUrl
                       ? `<img
                           src="${escapeHtml(
-                            profile.avatar_url
+                            avatarUrl
                           )}"
                           alt=""
                         />`
@@ -1862,13 +1877,21 @@ async function loadActiveUsers() {
     return [];
   }
 
-  state.activeUsers = data || [];
+  await loadPublicPrivacySettings((data || []).map((item) => item.user_id).filter(Boolean));
+  state.activeUsers = (data || []).filter((item) => {
+    const preferences = getPublicPrivacySettings(item.user_id);
+    return String(item.user_id) === String(state.user?.id) || (
+      preferences?.show_online_status !== false &&
+      String(item.status || "offline").toLowerCase() !== "offline"
+    );
+  });
 
   return state.activeUsers;
 }
 
 async function updatePresence(status = "online") {
   if (!supabaseClient || !state.user) return;
+  if (status !== "offline" && state.privacySettings?.show_online_status === false) status = "offline";
 
   const {
     error
@@ -1915,6 +1938,7 @@ function renderActiveUsers() {
 
           const status =
             item.status || "offline";
+          const avatarUrl = getProfileAvatarUrl(profile);
 
           return `
             <div class="active-user">
@@ -1923,10 +1947,10 @@ function renderActiveUsers() {
 
                 <div class="avatar">
                   ${
-                    profile.avatar_url
+                    avatarUrl
                       ? `<img
                           src="${escapeHtml(
-                            profile.avatar_url
+                            avatarUrl
                           )}"
                           alt=""
                         />`
@@ -2939,9 +2963,35 @@ async function hydrateHome() {
     );
 }
 
+function getComputedAcademicSummary() {
+  const scores = (state.scoreDetails || []).filter((item) => Number.isFinite(Number(item.score)));
+  const values = scores.map((item) => Number(item.score));
+  const total_tests = scores.length;
+  if (!total_tests) {
+    return { total_tests: 0, overall_average: null, GPA: null, gpa: null, overall_letter_grade: null, score_consistency: null, total_classes: state.classes?.length || 0 };
+  }
+  const overall_average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const gradePoints = scores.map((item) => item.grade_points != null && Number.isFinite(Number(item.grade_points)) ? Number(item.grade_points) : calculateGPA(item.score));
+  const GPA = gradePoints.reduce((sum, value) => sum + value, 0) / gradePoints.length;
+  const variance = values.reduce((sum, value) => sum + Math.pow(value - overall_average, 2), 0) / values.length;
+  const standardDeviation = Math.sqrt(variance);
+  const score_consistency = values.length > 1 ? Math.max(0, Math.min(100, 100 - standardDeviation)) : null;
+  return { total_tests, overall_average, GPA, gpa: GPA, overall_letter_grade: calculateLetterGrade(overall_average), score_consistency, total_classes: state.classes?.length || 0 };
+}
+
 function renderAcademicStatus() {
-  const summary =
-    state.academicSummary;
+  const computedSummary = getComputedAcademicSummary();
+  const rawSummary = state.academicSummary || {};
+  const summary = {
+    ...computedSummary,
+    ...rawSummary,
+    total_tests: rawSummary.total_tests ?? computedSummary.total_tests,
+    overall_average: rawSummary.overall_average ?? computedSummary.overall_average,
+    GPA: rawSummary.GPA ?? rawSummary.gpa ?? computedSummary.GPA,
+    gpa: rawSummary.gpa ?? rawSummary.GPA ?? computedSummary.gpa,
+    score_consistency: rawSummary.score_consistency ?? computedSummary.score_consistency,
+    total_classes: rawSummary.total_classes ?? state.classes?.length ?? 0
+  };
 
   const tests =
     Number(
@@ -2961,7 +3011,7 @@ function renderAcademicStatus() {
   const latest =
     state.scoreDetails[0];
 
-  if (!summary && !tests) {
+  if (!tests && !state.scoreDetails.length) {
     return `
       <div class="empty-state">
 
@@ -4512,6 +4562,7 @@ function renderCareMessage(message) {
   const mine =
     (message.sender_id || message.user_id) ===
     state.user?.id;
+  const avatarUrl = getProfileAvatarUrl(profile);
 
   const created =
     new Date(
@@ -4537,10 +4588,10 @@ function renderCareMessage(message) {
 
       <div class="avatar">
         ${
-          profile.avatar_url
+          avatarUrl
             ? `<img
                 src="${escapeHtml(
-                  profile.avatar_url
+                  avatarUrl
                 )}"
                 alt=""
               />`
@@ -4761,6 +4812,7 @@ async function hydrateDirectMessage() {
 
 async function startDirectMessage(targetUserId) {
   if (!supabaseClient || !state.user || !targetUserId) return;
+  if (String(targetUserId) === String(state.user.id)) return;
 
   state.currentConversationType = "direct";
 
@@ -4777,6 +4829,12 @@ async function startDirectMessage(targetUserId) {
     state.currentPage = "messages";
     renderAppShell();
     await hydrateDirectMessage();
+    return;
+  }
+
+  const targetPrivacy = getPublicPrivacySettings(targetUserId);
+  if (targetPrivacy?.allow_messages === false) {
+    showMessage("This classmate is not accepting new private messages.", "error");
     return;
   }
 
@@ -8235,6 +8293,15 @@ async function saveSettingsToggle(group, key, enabled) {
 
       if (error) throw error;
       state.privacySettings = data;
+      state.publicPrivacySettings = {
+        ...(state.publicPrivacySettings || {}),
+        [String(state.user.id)]: {
+          user_id: data.user_id,
+          show_online_status: data.show_online_status,
+          allow_messages: data.allow_messages,
+          show_profile_picture: data.show_profile_picture
+        }
+      };
     } else {
       const next = {
         ...(state.notificationPreferences || {}),
@@ -8361,43 +8428,46 @@ async function handleAccountAction(action) {
    ========================================================= */
 
 async function loadSettings() {
-  if (!supabaseClient || !state.user)
-    return;
+  if (!supabaseClient || !state.user) return;
 
-  const [
-    notificationResult,
-    privacyResult
-  ] = await Promise.all([
-    supabaseClient
-      .from(
-        "notification_preferences"
-      )
-      .select("*")
-      .eq(
-        "user_id",
-        state.user.id
-      )
-      .maybeSingle(),
-
-    supabaseClient
-      .from(
-        "privacy_settings"
-      )
-      .select("*")
-      .eq(
-        "user_id",
-        state.user.id
-      )
-      .maybeSingle()
+  const [notificationResult, privacyResult, publicPrivacyResult] = await Promise.all([
+    supabaseClient.from("notification_preferences").select("*").eq("user_id", state.user.id).maybeSingle(),
+    supabaseClient.from("privacy_settings").select("*").eq("user_id", state.user.id).maybeSingle(),
+    supabaseClient.from("privacy_settings").select("user_id,show_online_status,allow_messages,show_profile_picture")
   ]);
 
-  state.notificationPreferences =
-    notificationResult.data ||
-    null;
+  state.notificationPreferences = notificationResult.data || null;
+  state.privacySettings = privacyResult.data || null;
 
-  state.privacySettings =
-    privacyResult.data ||
-    null;
+  if (publicPrivacyResult.error) {
+    console.warn("Public privacy controls could not be loaded. Apply supabase/privacy_controls_visibility.sql to enable classmates' privacy preferences.", publicPrivacyResult.error);
+  } else {
+    state.publicPrivacySettings = Object.fromEntries(
+      (publicPrivacyResult.data || []).map((item) => [String(item.user_id), item])
+    );
+  }
+}
+
+async function loadPublicPrivacySettings(userIds = []) {
+  if (!supabaseClient || !Array.isArray(userIds) || !userIds.length) return state.publicPrivacySettings || {};
+  const missing = [...new Set(userIds.map(String))].filter((id) => !state.publicPrivacySettings?.[id]);
+  if (!missing.length) return state.publicPrivacySettings || {};
+
+  const { data, error } = await supabaseClient
+    .from("privacy_settings")
+    .select("user_id,show_online_status,allow_messages,show_profile_picture")
+    .in("user_id", missing);
+
+  if (error) {
+    console.warn("Unable to load classmates' privacy controls:", error);
+    return state.publicPrivacySettings || {};
+  }
+
+  state.publicPrivacySettings = {
+    ...(state.publicPrivacySettings || {}),
+    ...Object.fromEntries((data || []).map((item) => [String(item.user_id), item]))
+  };
+  return state.publicPrivacySettings;
 }
 
 /* =========================================================
