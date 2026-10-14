@@ -1334,7 +1334,13 @@ async function loadChapters() {
     return [];
   }
 
-  state.chapters = data || [];
+  state.chapters = (data || []).sort((a, b) =>
+    String(a.chapter_number ?? "").localeCompare(
+      String(b.chapter_number ?? ""),
+      undefined,
+      { numeric: true, sensitivity: "base" }
+    )
+  );
 
   return state.chapters;
 }
