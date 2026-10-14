@@ -7748,7 +7748,6 @@ async function hydrateAcademicPage(page) {
     attachAcademicPageNavEvents();
     attachAcademicReportEvents();
   }
-  if (page === "gradebook") attachAcademicPageNavEvents();
 }
 
 function renderAcademicPageTabs(active) {
@@ -7822,7 +7821,6 @@ function attachAcademicPageNavEvents() {
 }
 
 function attachGradebookEvents() {
-  attachAcademicPageNavEvents();
   const search = $("#gradebook-search"), filter = $("#gradebook-filter");
   const apply = () => {
     const query = (search?.value || "").trim().toLowerCase();
