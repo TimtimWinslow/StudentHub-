@@ -25,3 +25,8 @@ This checklist separates automated repository checks from checks that require th
 - [ ] Review browser console and Supabase logs for errors.
 - [ ] Resolve all critical/high-priority findings and record any accepted minor limitations.
 - [ ] Publish the GitHub v1.0.0 release only after the live release checks pass.
+
+## Security migration
+- [ ] Review and apply `supabase/v1_0_release_security_hardening.sql` after the Care Team and admin migrations.
+- [ ] Test that a student cannot read another student's direct messages or private-conversation membership.
+- [ ] Test that a student cannot join a private conversation without being invited by its creator.
