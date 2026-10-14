@@ -9122,15 +9122,14 @@ window.addEventListener(
 );
 
 function toggleTheme() {
-  const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-  const next = current === "light" ? "dark" : "light";
-  document.documentElement.dataset.theme = next;
+  // StudentHub keeps the navy/teal appearance as its consistent default.
+  document.documentElement.dataset.theme = "dark";
   try {
-    localStorage.setItem("studenthub-theme", next);
+    localStorage.setItem("studenthub-theme", "dark");
   } catch (error) {
     console.warn("StudentHub could not save the theme preference:", error);
   }
-  return next;
+  return "dark";
 }
 
 /* =========================================================
@@ -9138,18 +9137,12 @@ function toggleTheme() {
    ========================================================= */
 
 (function restoreTheme() {
-  const saved =
-    localStorage.getItem(
-      "studenthub-theme"
-    );
-
-  if (
-    saved === "dark" ||
-    saved === "light"
-  ) {
-    document.documentElement
-      .dataset.theme =
-      saved;
+  // Clear any previously saved light setting that could turn the app white.
+  document.documentElement.dataset.theme = "dark";
+  try {
+    localStorage.setItem("studenthub-theme", "dark");
+  } catch (error) {
+    console.warn("StudentHub could not restore the theme preference:", error);
   }
 })();
 
