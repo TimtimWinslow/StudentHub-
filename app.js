@@ -58,6 +58,8 @@ const state = {
   notifications: [],
 
   careMessages: [],
+  // Keep a separate in-memory fallback per thread if a temporary read fails.
+  careMessagesByConversation: {},
   pinnedMessages: [],
   messageReactions: [],
   conversations: [],
@@ -3986,9 +3988,12 @@ async function loadCareMessages() {
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("Care Team message load error:", error);
-    state.careMessages = [];
-    return [];
+    console.error("Conversation message load error:", error);
+    // Do not silently erase the visible conversation when a read fails.
+    // Keep only this conversation's last-known messages as a temporary fallback.
+    state.careMessages = state.careMessagesByConversation[state.currentConversationId] || [];
+    showMessage("Messages could not be refreshed. Check your connection and try again.", "error");
+    return state.careMessages;
   }
 
   const messages = data || [];
@@ -4025,6 +4030,7 @@ async function loadCareMessages() {
       profiles: profilesById[senderId] || null
     };
   });
+  state.careMessagesByConversation[state.currentConversationId] = state.careMessages;
 
   return state.careMessages;
 }
@@ -5001,11 +5007,44 @@ async function sendCareMessage(content) {
   }
 
   const conversation = state.conversations.find(
-    (item) => item.id === state.currentConversationId
+    (item) => String(item.id) === String(state.currentConversationId)
   );
   const isDirect =
     state.currentConversationType === "direct" ||
     conversation?.type === "direct";
+
+  // A user must be a conversation member for message RLS to allow sending.
+  // Re-join the class group if the membership row is missing or was not visible
+  // when the chat first loaded.
+  if (!isDirect) {
+    const { data: membership, error: membershipReadError } = await supabaseClient
+      .from("conversation_members")
+      .select("user_id")
+      .eq("conversation_id", state.currentConversationId)
+      .eq("user_id", state.user.id)
+      .maybeSingle();
+
+    if (membershipReadError) {
+      console.error("Conversation membership check failed:", membershipReadError);
+      showMessage("StudentHub couldn't verify your Care Team membership. Refresh and try again.", "error");
+      return false;
+    }
+
+    if (!membership) {
+      const { error: joinError } = await supabaseClient
+        .from("conversation_members")
+        .insert({
+          conversation_id: state.currentConversationId,
+          user_id: state.user.id
+        });
+
+      if (joinError && joinError.code !== "23505") {
+        console.error("Care Team membership join failed:", joinError);
+        showMessage(joinError.message || "You couldn't be added to The Care Team. Please contact the class admin.", "error");
+        return false;
+      }
+    }
+  }
 
   const payload = {
     user_id: state.user.id,
@@ -5017,7 +5056,9 @@ async function sendCareMessage(content) {
 
   let result = await supabaseClient
     .from("messages")
-    .insert(payload);
+    .insert(payload)
+    .select("*")
+    .single();
 
   if (
     result.error &&
@@ -5033,7 +5074,9 @@ async function sendCareMessage(content) {
         message: content,
         sender_id: state.user.id,
         reply_to_message_id: state.replyToMessage?.id || null
-      });
+      })
+      .select("*")
+      .single();
   }
 
   if (result.error) {
@@ -5043,6 +5086,16 @@ async function sendCareMessage(content) {
       "error"
     );
     return false;
+  }
+
+  // Preserve the saved row in this thread while the refreshed history loads.
+  if (result.data) {
+    const conversationId = state.currentConversationId;
+    const existing = state.careMessagesByConversation[conversationId] || [];
+    state.careMessagesByConversation[conversationId] = [
+      ...existing.filter((message) => message.id !== result.data.id),
+      result.data
+    ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   }
 
   state.replyToMessage = null;
@@ -9237,14 +9290,15 @@ window.addEventListener(
 );
 
 function toggleTheme() {
-  // StudentHub keeps the navy/teal appearance as its consistent default.
-  document.documentElement.dataset.theme = "dark";
+  const currentTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const nextTheme = currentTheme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = nextTheme;
   try {
-    localStorage.setItem("studenthub-theme", "dark");
+    localStorage.setItem("studenthub-theme", nextTheme);
   } catch (error) {
     console.warn("StudentHub could not save the theme preference:", error);
   }
-  return "dark";
+  return nextTheme;
 }
 
 /* =========================================================
@@ -9252,13 +9306,14 @@ function toggleTheme() {
    ========================================================= */
 
 (function restoreTheme() {
-  // Clear any previously saved light setting that could turn the app white.
-  document.documentElement.dataset.theme = "dark";
+  let savedTheme = "dark";
   try {
-    localStorage.setItem("studenthub-theme", "dark");
+    const storedTheme = localStorage.getItem("studenthub-theme");
+    if (storedTheme === "light" || storedTheme === "dark") savedTheme = storedTheme;
   } catch (error) {
     console.warn("StudentHub could not restore the theme preference:", error);
   }
+  document.documentElement.dataset.theme = savedTheme;
 })();
 
 /* =========================================================
