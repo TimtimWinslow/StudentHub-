@@ -5007,11 +5007,44 @@ async function sendCareMessage(content) {
   }
 
   const conversation = state.conversations.find(
-    (item) => item.id === state.currentConversationId
+    (item) => String(item.id) === String(state.currentConversationId)
   );
   const isDirect =
     state.currentConversationType === "direct" ||
     conversation?.type === "direct";
+
+  // A user must be a conversation member for message RLS to allow sending.
+  // Re-join the class group if the membership row is missing or was not visible
+  // when the chat first loaded.
+  if (!isDirect) {
+    const { data: membership, error: membershipReadError } = await supabaseClient
+      .from("conversation_members")
+      .select("user_id")
+      .eq("conversation_id", state.currentConversationId)
+      .eq("user_id", state.user.id)
+      .maybeSingle();
+
+    if (membershipReadError) {
+      console.error("Conversation membership check failed:", membershipReadError);
+      showMessage("StudentHub couldn't verify your Care Team membership. Refresh and try again.", "error");
+      return false;
+    }
+
+    if (!membership) {
+      const { error: joinError } = await supabaseClient
+        .from("conversation_members")
+        .insert({
+          conversation_id: state.currentConversationId,
+          user_id: state.user.id
+        });
+
+      if (joinError && joinError.code !== "23505") {
+        console.error("Care Team membership join failed:", joinError);
+        showMessage(joinError.message || "You couldn't be added to The Care Team. Please contact the class admin.", "error");
+        return false;
+      }
+    }
+  }
 
   const payload = {
     user_id: state.user.id,
